@@ -75,23 +75,27 @@ def auth_login():
     config = get_config()
     try:
         client_id = config.get('connect', 'client_id')
-        auth_url = ToDoConnection.get_auth_url(client_id)
+        # 현재 요청의 도메인을 기반으로 redirect_uri 생성
+        # (예: http://10.0.0.99:5001/auth/callback)
+        redirect_uri = url_for('auth_callback', _external=True)
+        
+        # ToDoConnection 인스턴스를 생성하여 redirect_uri를 명시적으로 전달
+        # pymstodo의 버전에 따라 static 메서드 대신 인스턴스 메서드 사용 권장
+        auth_url = ToDoConnection.get_auth_url(client_id, redirect_uri=redirect_uri)
         return redirect(auth_url)
-    except configparser.NoOptionError:
-        return "Client ID not configured", 400
+    except Exception as e:
+        return f"Login Error: {str(e)}", 400
 
 @app.route('/auth/callback')
 def auth_callback():
-    # Microsoft redirects back with the full URL in the browser, 
-    # but technically it sends a 'code' parameter if using standard OAuth.
-    # pymstodo's get_token expects the full redirect URI.
+    # Microsoft에서 돌아올 때의 URL 전체를 사용
     redirect_uri = request.url
     config = get_config()
     try:
         client_id = config.get('connect', 'client_id')
         client_secret = config.get('connect', 'client_secret')
         
-        # In modern pymstodo, get_token handles the code exchange
+        # 토큰 교환 시에도 동일한 redirect_uri (현재 URL) 사용
         token = ToDoConnection.get_token(client_id, client_secret, redirect_uri)
         
         config.set('connect', 'client_token', str(token))
