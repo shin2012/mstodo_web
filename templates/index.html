@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title> 할 일 대시보드 | Microsoft To Do</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+        body { font-family: 'Inter', 'Noto Sans KR', sans-serif; background-color: #f8fafc; }
+        .task-card { transition: all 0.2s ease; }
+        .task-card:hover { transform: translateY(-1px); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); }
+        .completed { text-decoration: line-through; color: #94a3b8; opacity: 0.6; }
+        .fade-out { opacity: 0; transform: translateX(20px); transition: all 0.4s ease; }
+        .chip { transition: all 0.2s; cursor: pointer; white-space: nowrap; }
+        .chip.active { background-color: #3b82f6; color: white; border-color: #3b82f6; }
+        /* Hide scrollbar */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="p-4 md:p-8">
+    <div class="max-w-3xl mx-auto">
+        <header class="mb-6">
+            <div class="flex justify-between items-center mb-4">
+                <h1 class="text-2xl font-bold text-slate-800">나의 할 일</h1>
+                <div class="flex items-center space-x-2 text-sm text-slate-400">
+                    <span id="auto-refresh-timer">10s</span>
+                    <i class="fas fa-sync-alt" id="refresh-icon"></i>
+                </div>
+            </div>
+
+            <!-- List Selection (Chips) -->
+            <div id="list-container" class="flex overflow-x-auto space-x-2 pb-2 no-scrollbar mb-4">
+                <div onclick="selectList(null)" id="chip-all" class="chip active px-4 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 text-sm font-medium">
+                    전체
+                </div>
+                <!-- Lists will be injected here -->
+            </div>
+
+            <!-- Task Input -->
+            <div class="relative">
+                <input type="text" id="task-input" 
+                       placeholder="새로운 할 일 추가... (Enter)"
+                       class="w-full pl-4 pr-12 py-3 bg-white border border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                       onkeypress="if(event.key === 'Enter') addTask()">
+                <button onclick="addTask()" class="absolute right-2 top-2 p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
+                    <i class="fas fa-plus-circle text-xl"></i>
+                </button>
+            </div>
+        </header>
+
+        <div id="loading" class="flex justify-center py-20">
+            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
+        </div>
+
+        <div id="task-list" class="space-y-2.5 hidden">
+            <!-- Tasks will be injected here -->
+        </div>
+
+        <div id="empty-state" class="hidden text-center py-20 bg-white rounded-2xl border border-dashed border-slate-300">
+            <i class="fas fa-clipboard-list text-slate-200 text-5xl mb-4"></i>
+            <p class="text-slate-400">현재 목록에 할 일이 없습니다.</p>
+        </div>
+    </div>
+
+    <script>
+        let currentListId = null;
+        let lastActivity = Date.now();
+        let refreshSecondsLeft = 10;
+        let isProcessing = false;
+
+        // Auto Refresh logic
+        setInterval(() => {
+            if (isProcessing) return;
+            
+            // Check if user is typing
+            const isTyping = document.activeElement === document.getElementById('task-input');
+            if (isTyping) {
+                refreshSecondsLeft = 10;
+                updateTimerUI();
+                return;
+            }
+
+            refreshSecondsLeft--;
+            if (refreshSecondsLeft <= 0) {
+                fetchTasks(true); // silent refresh
+                refreshSecondsLeft = 10;
+            }
+            updateTimerUI();
+        }, 1000);
+
+        function updateTimerUI() {
+            document.getElementById('auto-refresh-timer').innerText = refreshSecondsLeft + 's';
+        }
+
+        async function fetchLists() {
+            try {
+                const response = await fetch('/api/lists');
+                const lists = await response.json();
+                const container = document.getElementById('list-container');
+                
+                // Keep "All" and add others
+                const allChip = document.getElementById('chip-all');
+                container.innerHTML = '';
+                container.appendChild(allChip);
+
+                lists.forEach(list => {
+                    const chip = document.createElement('div');
+                    chip.id = `chip-${list.id}`;
+                    chip.className = 'chip px-4 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 text-sm font-medium';
+                    chip.innerText = list.name;
+                    chip.onclick = () => selectList(list.id);
+                    container.appendChild(chip);
+                });
+            } catch (err) { console.error('Failed to fetch lists', err); }
+        }
+
+        function selectList(id) {
+            currentListId = id;
+            // Update UI
+            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+            if (id === null) {
+                document.getElementById('chip-all').classList.add('active');
+            } else {
+                const activeChip = document.getElementById(`chip-${id}`);
+                if (activeChip) activeChip.classList.add('active');
+            }
+            fetchTasks();
+        }
+
+        async function fetchTasks(silent = false) {
+            const loading = document.getElementById('loading');
+            const taskList = document.getElementById('task-list');
+            const emptyState = document.getElementById('empty-state');
+            const refreshIcon = document.getElementById('refresh-icon');
+
+            if (!silent) {
+                loading.classList.remove('hidden');
+                taskList.classList.add('hidden');
+                emptyState.classList.add('hidden');
+            }
+            refreshIcon.classList.add('fa-spin');
+
+            try {
+                const url = currentListId ? `/api/tasks?list_id=${currentListId}` : '/api/tasks';
+                const response = await fetch(url);
+                const tasks = await response.json();
+
+                if (tasks.length === 0) {
+                    taskList.classList.add('hidden');
+                    emptyState.classList.remove('hidden');
+                } else {
+                    renderTasks(tasks);
+                    taskList.classList.remove('hidden');
+                    emptyState.classList.add('hidden');
+                }
+            } catch (err) {
+                console.error(err);
+            } finally {
+                loading.classList.add('hidden');
+                refreshIcon.classList.remove('fa-spin');
+                refreshSecondsLeft = 10;
+            }
+        }
+
+        function renderTasks(tasks) {
+            const container = document.getElementById('task-list');
+            container.innerHTML = '';
+
+            tasks.forEach(task => {
+                const card = document.createElement('div');
+                card.id = `task-${task.id}`;
+                card.className = 'task-card bg-white p-3.5 rounded-xl border border-slate-200 flex items-center space-x-3.5';
+                
+                const isUrgent = task.importance === 'high';
+                
+                card.innerHTML = `
+                    <div class="flex-shrink-0">
+                        <input type="checkbox" 
+                               onchange="completeTask('${task.list_id}', '${task.id}')"
+                               class="w-5 h-5 rounded-full border-slate-300 text-blue-500 focus:ring-blue-500 cursor-pointer">
+                    </div>
+                    <div class="flex-grow">
+                        <h3 class="text-[15px] font-medium text-slate-800">
+                            ${task.title}
+                            ${isUrgent ? '<i class="fas fa-star text-yellow-400 ml-1 text-xs"></i>' : ''}
+                        </h3>
+                        <div class="flex items-center text-xs mt-0.5 space-x-3 text-slate-400">
+                            <span class="flex items-center">
+                                <i class="fas fa-tag mr-1 opacity-60"></i> ${task.list_name}
+                            </span>
+                            ${task.due_date ? `<span class="flex items-center"><i class="far fa-calendar-alt mr-1 opacity-60"></i> ${formatDate(task.due_date)}</span>` : ''}
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function formatDate(dateStr) {
+            const d = new Date(dateStr);
+            const now = new Date();
+            if (d.toDateString() === now.toDateString()) return '오늘';
+            return (d.getMonth() + 1) + '월 ' + d.getDate() + '일';
+        }
+
+        async function addTask() {
+            const input = document.getElementById('task-input');
+            const title = input.value.trim();
+            if (!title) return;
+            
+            // Default to first list if "All" is selected
+            let targetListId = currentListId;
+            if (!targetListId) {
+                const firstChip = document.querySelectorAll('.chip')[1]; // Skip "All"
+                if (firstChip) {
+                    targetListId = firstChip.id.replace('chip-', '');
+                } else {
+                    alert('목록 정보를 불러오는 중입니다. 잠시만 기다려주세요.');
+                    return;
+                }
+            }
+
+            isProcessing = true;
+            input.disabled = true;
+
+            try {
+                const response = await fetch('/api/tasks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: title, list_id: targetListId })
+                });
+                if (response.ok) {
+                    input.value = '';
+                    await fetchTasks();
+                }
+            } finally {
+                input.disabled = false;
+                isProcessing = false;
+                input.focus();
+            }
+        }
+
+        async function completeTask(listId, taskId) {
+            const card = document.getElementById(`task-${taskId}`);
+            card.classList.add('completed');
+            
+            try {
+                await fetch(`/api/complete/${listId}/${taskId}`, { method: 'POST' });
+                card.classList.add('fade-out');
+                setTimeout(() => card.remove(), 400);
+            } catch (err) {
+                card.classList.remove('completed');
+                card.querySelector('input').checked = false;
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchLists();
+            fetchTasks();
+        });
+    </script>
+</body>
+</html>

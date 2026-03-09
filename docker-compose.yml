@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  mstodo_web:
+    build: .
+    container_name: mstodo_web
+    restart: always
+    ports:
+      - "5001:5001"
+    volumes:
+      - .:/app
+    environment:
+      - TZ=Asia/Seoul

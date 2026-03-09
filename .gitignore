@@ -1,0 +1,9 @@
+__pycache__/
+.DS_Store
+bin/
+include/
+lib/
+pyvenv.cfg
+token.json
+config.ini
+gunicorn.ctl
