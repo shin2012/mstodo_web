@@ -26,6 +26,10 @@ def get_config():
     
     return config
 
+def save_config(config):
+    with open(CONFIG_FILE, 'w') as configfile:
+        config.write(configfile)
+
 def get_todo_client():
     config = get_config()
     try:
