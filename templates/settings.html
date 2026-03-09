@@ -3,55 +3,100 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>설정 - MS To-Do Web</title>
+    <title>설정 | Microsoft To Do</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; line-height: 1.6; }
-        .card { border: 1px solid #ddd; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .form-group { margin-bottom: 15px; }
-        label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input[type="text"], input[type="password"] { width: 100%; padding: 8px; box-sizing: border-box; }
-        button { background: #0078d4; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; }
-        button:hover { background: #005a9e; }
-        .status { margin-top: 20px; padding: 10px; border-radius: 4px; }
-        .status.ok { background: #dff6dd; color: #107c10; }
-        .status.warn { background: #fff4ce; color: #797775; }
-        .btn-auth { display: inline-block; background: #2b5797; color: white; text-decoration: none; padding: 10px 15px; border-radius: 4px; margin-top: 10px; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
+        body { font-family: 'Inter', 'Noto Sans KR', sans-serif; background-color: #f8fafc; }
     </style>
 </head>
-<body>
-    <h1>설정</h1>
-    <div class="card">
-        <form method="POST">
-            <div class="form-group">
-                <label for="client_id">Client ID</label>
-                <input type="text" id="client_id" name="client_id" value="{{ client_id }}" required>
-            </div>
-            <div class="form-group">
-                <label for="client_secret">Client Secret</label>
-                <input type="password" id="client_secret" name="client_secret" value="{{ client_secret }}" required>
-            </div>
-            <button type="submit">저장</button>
-        </form>
-
-        <div class="status {% if has_token %}ok{% else %}warn{% endif %}">
-            {% if has_token %}
-                <strong>상태:</strong> 인증됨 (토큰 보유중)
-            {% else %}
-                <strong>상태:</strong> 인증 필요 (토큰 없음)
-            {% endif %}
+<body class="bg-slate-50 min-h-screen">
+    <div class="max-w-xl mx-auto py-12 px-4">
+        <div class="mb-8">
+            <a href="/" class="text-slate-400 hover:text-blue-500 flex items-center transition-colors mb-4">
+                <i class="fas fa-arrow-left mr-2"></i> 대시보드로 돌아가기
+            </a>
+            <h1 class="text-3xl font-bold text-slate-800">서비스 설정</h1>
+            <p class="text-slate-500 mt-2">Microsoft To-Do API 연동 및 계정 연결을 관리합니다.</p>
         </div>
 
-        {% if client_id and client_secret %}
-        <div style="margin-top: 20px;">
-            <h3>마이크로소프트 로그인</h3>
-            <p>Azure portal에서 설정한 Redirect URI가 현재 접속 주소의 <code>/auth/callback</code>인지 확인하세요.</p>
-            <a href="{{ url_for('auth_login') }}" class="btn-auth">MS 계정으로 로그인</a>
+        <!-- 1. 계정 연동 상태 카드 -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-lg font-semibold text-slate-800">계정 연결 상태</h2>
+                    {% if has_token %}
+                    <span class="flex items-center px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">
+                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 mr-2"></span> 연결됨
+                    </span>
+                    {% else %}
+                    <span class="flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">
+                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-2"></span> 연결 필요
+                    </span>
+                    {% endif %}
+                </div>
+
+                {% if has_token %}
+                <p class="text-sm text-slate-500 mb-6">이미 Microsoft 계정이 연결되어 있습니다. 다시 연결하려면 아래 버튼을 클릭하세요.</p>
+                {% else %}
+                <p class="text-sm text-slate-500 mb-6">할 일 목록을 가져오려면 먼저 Microsoft 계정으로 로그인해야 합니다.</p>
+                {% endif %}
+
+                {% if client_id and client_secret %}
+                <a href="{{ url_for('auth_login') }}" 
+                   class="w-full inline-flex items-center justify-center px-6 py-3 bg-[#0078d4] hover:bg-[#005a9e] text-white font-semibold rounded-xl transition-all shadow-md hover:shadow-lg">
+                    <i class="fab fa-microsoft mr-3 text-lg"></i>
+                    Microsoft 계정으로 로그인
+                </a>
+                {% else %}
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
+                    <p class="text-sm text-slate-400 italic">먼저 API 설정을 완료하세요.</p>
+                </div>
+                {% endif %}
+            </div>
         </div>
-        {% endif %}
+
+        <!-- 2. API 상세 설정 (상세 정보 클릭 시 열림) -->
+        <details class="group bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+            <summary class="list-none p-6 cursor-pointer flex items-center justify-between">
+                <h2 class="text-lg font-semibold text-slate-800">API 고급 설정</h2>
+                <span class="text-slate-400 transition-transform group-open:rotate-180">
+                    <i class="fas fa-chevron-down"></i>
+                </span>
+            </summary>
+            <div class="px-6 pb-6 pt-0">
+                <form method="POST" class="space-y-4">
+                    <div>
+                        <label for="client_id" class="block text-sm font-medium text-slate-700 mb-1">Application (client) ID</label>
+                        <input type="text" id="client_id" name="client_id" value="{{ client_id }}" 
+                               class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm font-mono"
+                               required>
+                    </div>
+                    <div>
+                        <label for="client_secret" class="block text-sm font-medium text-slate-700 mb-1">Client Secret</label>
+                        <input type="password" id="client_secret" name="client_secret" value="{{ client_secret }}" 
+                               class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm font-mono"
+                               required>
+                    </div>
+                    <div class="bg-blue-50 rounded-lg p-4 mb-4">
+                        <h4 class="text-xs font-bold text-blue-800 mb-1 uppercase tracking-wider"><i class="fas fa-info-circle mr-1"></i> Azure Portal 설정 도움말</h4>
+                        <p class="text-xs text-blue-600 leading-relaxed">
+                            Azure AD에서 새 앱을 등록하고 <code class="bg-white px-1 rounded border border-blue-100">Tasks.ReadWrite</code> 권한을 부여하세요.
+                            Redirect URI는 현재 서비스 주소의 <code>/auth/callback</code>으로 설정해야 합니다.
+                        </p>
+                    </div>
+                    <button type="submit" 
+                            class="w-full px-6 py-2 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-lg transition-colors text-sm">
+                        API 설정 저장
+                    </button>
+                </form>
+            </div>
+        </details>
         
-        <div style="margin-top: 20px;">
-            <a href="{{ url_for('index') }}">← 메인 화면으로 돌아가기</a>
-        </div>
+        <p class="text-center text-xs text-slate-400 mt-8">
+            &copy; 2026 MS To Do Web App Helper
+        </p>
     </div>
 </body>
 </html>

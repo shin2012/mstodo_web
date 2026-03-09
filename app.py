@@ -17,25 +17,23 @@ def get_config():
         config.read(CONFIG_FILE)
     if not config.has_section('connect'):
         config.add_section('connect')
+    
+    # 환경 변수가 있으면 우선적으로 설정 (UI에서 입력하지 않아도 되도록)
+    env_id = os.environ.get('MS_CLIENT_ID')
+    env_secret = os.environ.get('MS_CLIENT_SECRET')
+    if env_id: config.set('connect', 'client_id', env_id)
+    if env_secret: config.set('connect', 'client_secret', env_secret)
+    
     return config
-
-def save_config(config):
-    with open(CONFIG_FILE, 'w') as configfile:
-        config.write(configfile)
 
 def get_todo_client():
     config = get_config()
     try:
-        if not config.has_option('connect', 'client_id') or \
-           not config.has_option('connect', 'client_secret') or \
-           not config.has_option('connect', 'client_token'):
-            return None
-            
-        client_id = config.get('connect', 'client_id')
-        client_secret = config.get('connect', 'client_secret')
-        token_str = config.get('connect', 'client_token')
+        client_id = config.get('connect', 'client_id', fallback=None)
+        client_secret = config.get('connect', 'client_secret', fallback=None)
+        token_str = config.get('connect', 'client_token', fallback=None)
         
-        if not token_str or token_str == 'None' or token_str == '':
+        if not client_id or not client_secret or not token_str or token_str == 'None':
             return None
             
         client_token = eval(token_str)

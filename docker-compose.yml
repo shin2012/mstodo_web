@@ -11,3 +11,5 @@ services:
       - .:/app
     environment:
       - TZ=Asia/Seoul
+      - MS_CLIENT_ID=
+      - MS_CLIENT_SECRET=
