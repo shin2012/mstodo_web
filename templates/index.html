@@ -25,48 +25,60 @@
         <header class="mb-6">
             <div class="flex justify-between items-center mb-4">
                 <div class="flex items-center space-x-3">
-                    <h1 class="text-2xl font-bold text-slate-800">나의 할 일</h1>
-                    <a href="/settings" class="text-slate-400 hover:text-blue-500 transition-colors" title="설정">
-                        <i class="fas fa-cog"></i>
+                    <h1 class="text-2xl font-extrabold text-slate-800 tracking-tight">나의 할 일</h1>
+                    <a href="/settings" class="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition-all" title="설정">
+                        <i class="fas fa-cog text-lg"></i>
                     </a>
                 </div>
-                <div class="flex items-center space-x-2 text-sm text-slate-400">
-                    <span id="auto-refresh-timer">10s</span>
-                    <i class="fas fa-sync-alt" id="refresh-icon"></i>
+                <div class="flex items-center space-x-2">
+                    <button onclick="fetchTasks()" class="flex items-center space-x-2 px-3 py-1.5 bg-white border border-slate-200 rounded-full hover:border-blue-300 hover:shadow-sm transition-all group">
+                        <span id="auto-refresh-timer" class="text-xs font-mono font-bold text-slate-500 group-hover:text-blue-600">10s</span>
+                        <i class="fas fa-sync-alt text-xs text-slate-300 group-hover:text-blue-500" id="refresh-icon"></i>
+                    </button>
                 </div>
             </div>
 
             <!-- List Selection (Chips) -->
-            <div id="list-container" class="flex overflow-x-auto space-x-2 pb-2 no-scrollbar mb-4">
-                <div onclick="selectList(null)" id="chip-all" class="chip active px-4 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 text-sm font-medium">
-                    전체
+            <div id="list-container" class="flex overflow-x-auto space-x-2 pb-2 no-scrollbar mb-6">
+                <div onclick="selectList(null)" id="chip-all" class="chip active px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-sm font-semibold shadow-sm">
+                    <i class="fas fa-layer-group mr-2 opacity-50"></i>전체
                 </div>
                 <!-- Lists will be injected here -->
             </div>
 
             <!-- Task Input -->
-            <div class="relative">
+            <div class="relative group">
+                <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                    <i class="fas fa-pen-nib"></i>
+                </div>
                 <input type="text" id="task-input" 
-                       placeholder="새로운 할 일 추가... (Enter)"
-                       class="w-full pl-4 pr-12 py-3 bg-white border border-slate-200 rounded-xl shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
+                       placeholder="어떤 일을 완료할까요?"
+                       class="w-full pl-11 pr-12 py-4 bg-white border border-slate-200 rounded-2xl shadow-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all text-slate-700 font-medium"
                        onkeypress="if(event.key === 'Enter') addTask()">
-                <button onclick="addTask()" class="absolute right-2 top-2 p-1.5 text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
-                    <i class="fas fa-plus-circle text-xl"></i>
+                <button onclick="addTask()" class="absolute right-2 top-2 bottom-2 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95">
+                    <i class="fas fa-plus"></i>
                 </button>
             </div>
         </header>
 
-        <div id="loading" class="flex justify-center py-20">
-            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
+        <div id="loading" class="flex flex-col items-center justify-center py-24 space-y-4">
+            <div class="relative w-12 h-12">
+                <div class="absolute inset-0 border-4 border-blue-100 rounded-full"></div>
+                <div class="absolute inset-0 border-4 border-blue-500 rounded-full border-t-transparent animate-spin"></div>
+            </div>
+            <p class="text-sm font-medium text-slate-400 animate-pulse">할 일을 불러오는 중...</p>
         </div>
 
-        <div id="task-list" class="space-y-2.5 hidden">
+        <div id="task-list" class="space-y-3 hidden">
             <!-- Tasks will be injected here -->
         </div>
 
-        <div id="empty-state" class="hidden text-center py-20 bg-white rounded-2xl border border-dashed border-slate-300">
-            <i class="fas fa-clipboard-list text-slate-200 text-5xl mb-4"></i>
-            <p class="text-slate-400">현재 목록에 할 일이 없습니다.</p>
+        <div id="empty-state" class="hidden flex flex-col items-center justify-center py-24 bg-white rounded-3xl border border-dashed border-slate-200 shadow-inner">
+            <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
+                <i class="fas fa-check-double text-slate-200 text-4xl"></i>
+            </div>
+            <h3 class="text-lg font-bold text-slate-700 mb-1">모든 할 일을 마쳤습니다!</h3>
+            <p class="text-slate-400 text-sm">새로운 할 일을 추가하고 오늘을 기록해보세요.</p>
         </div>
     </div>
 
@@ -114,8 +126,8 @@
                 lists.forEach(list => {
                     const chip = document.createElement('div');
                     chip.id = `chip-${list.id}`;
-                    chip.className = 'chip px-4 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 text-sm font-medium';
-                    chip.innerText = list.name;
+                    chip.className = 'chip px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-sm font-semibold shadow-sm transition-all';
+                    chip.innerHTML = `<i class="fas fa-list-ul mr-2 opacity-40"></i>${list.name}`;
                     chip.onclick = () => selectList(list.id);
                     container.appendChild(chip);
                 });
@@ -125,7 +137,7 @@
         function selectList(id) {
             currentListId = id;
             // Update UI
-            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-blue-500/20', 'border-blue-500'));
             if (id === null) {
                 document.getElementById('chip-all').classList.add('active');
             } else {
@@ -177,27 +189,42 @@
             tasks.forEach(task => {
                 const card = document.createElement('div');
                 card.id = `task-${task.id}`;
-                card.className = 'task-card bg-white p-3.5 rounded-xl border border-slate-200 flex items-center space-x-3.5';
+                card.className = 'group task-card bg-white p-4 rounded-2xl border border-slate-200 flex items-center space-x-4 shadow-sm hover:shadow-md hover:border-blue-100 transition-all';
                 
                 const isUrgent = task.importance === 'high';
+                const isOverdue = task.due_date && new Date(task.due_date) < new Date(new Date().setHours(0,0,0,0));
                 
                 card.innerHTML = `
                     <div class="flex-shrink-0">
-                        <input type="checkbox" 
-                               onchange="completeTask('${task.list_id}', '${task.id}')"
-                               class="w-5 h-5 rounded-full border-slate-300 text-blue-500 focus:ring-blue-500 cursor-pointer">
-                    </div>
-                    <div class="flex-grow">
-                        <h3 class="text-[15px] font-medium text-slate-800">
-                            ${task.title}
-                            ${isUrgent ? '<i class="fas fa-star text-yellow-400 ml-1 text-xs"></i>' : ''}
-                        </h3>
-                        <div class="flex items-center text-xs mt-0.5 space-x-3 text-slate-400">
-                            <span class="flex items-center">
-                                <i class="fas fa-tag mr-1 opacity-60"></i> ${task.list_name}
-                            </span>
-                            ${task.due_date ? `<span class="flex items-center"><i class="far fa-calendar-alt mr-1 opacity-60"></i> ${formatDate(task.due_date)}</span>` : ''}
+                        <div class="relative w-6 h-6 group/check">
+                            <input type="checkbox" 
+                                   onchange="completeTask('${task.list_id}', '${task.id}')"
+                                   class="peer appearance-none w-6 h-6 rounded-full border-2 border-slate-200 checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer">
+                            <i class="fas fa-check absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none"></i>
                         </div>
+                    </div>
+                    <div class="flex-grow min-w-0">
+                        <div class="flex items-center space-x-2">
+                            <h3 class="text-[15px] font-bold text-slate-700 truncate group-hover:text-blue-900 transition-colors">
+                                ${task.title}
+                            </h3>
+                            ${isUrgent ? '<i class="fas fa-fire text-orange-500 text-xs animate-pulse" title="중요"></i>' : ''}
+                        </div>
+                        <div class="flex items-center text-[11px] mt-1.5 space-x-3 text-slate-400 font-medium">
+                            <span class="flex items-center px-2 py-0.5 bg-slate-50 rounded-lg text-slate-500 border border-slate-100">
+                                <i class="fas fa-folder-open mr-1.5 text-[10px] opacity-60"></i>${task.list_name}
+                            </span>
+                            ${task.due_date ? `
+                                <span class="flex items-center ${isOverdue ? 'text-rose-500 bg-rose-50 px-2 py-0.5 rounded-lg border border-rose-100' : ''}">
+                                    <i class="far fa-calendar-check mr-1.5 text-[10px] opacity-60"></i>${formatDate(task.due_date)}
+                                </span>
+                            ` : ''}
+                        </div>
+                    </div>
+                    <div class="flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                         <button class="p-2 text-slate-300 hover:text-slate-600 transition-colors">
+                            <i class="fas fa-ellipsis-v text-xs"></i>
+                         </button>
                     </div>
                 `;
                 container.appendChild(card);

@@ -13,90 +13,125 @@
 </head>
 <body class="bg-slate-50 min-h-screen">
     <div class="max-w-xl mx-auto py-12 px-4">
-        <div class="mb-8">
-            <a href="/" class="text-slate-400 hover:text-blue-500 flex items-center transition-colors mb-4">
-                <i class="fas fa-arrow-left mr-2"></i> 대시보드로 돌아가기
+        <div class="mb-10">
+            <a href="/" class="group inline-flex items-center text-slate-400 hover:text-blue-600 transition-all mb-6">
+                <div class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center mr-3 group-hover:border-blue-200 group-hover:shadow-sm transition-all">
+                    <i class="fas fa-chevron-left text-xs"></i>
+                </div>
+                <span class="font-semibold text-sm">대시보드로 돌아가기</span>
             </a>
-            <h1 class="text-3xl font-bold text-slate-800">서비스 설정</h1>
-            <p class="text-slate-500 mt-2">Microsoft To-Do API 연동 및 계정 연결을 관리합니다.</p>
+            <h1 class="text-3xl font-extrabold text-slate-800 tracking-tight">서비스 설정</h1>
+            <p class="text-slate-500 mt-2 font-medium">Microsoft To-Do API 연동 및 계정 연결을 관리합니다.</p>
         </div>
 
         <!-- 1. 계정 연동 상태 카드 -->
-        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden mb-6">
-            <div class="p-6">
-                <div class="flex items-center justify-between mb-4">
-                    <h2 class="text-lg font-semibold text-slate-800">계정 연결 상태</h2>
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden mb-8">
+            <div class="p-8">
+                <div class="flex items-center justify-between mb-6">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500">
+                            <i class="fas fa-user-shield text-lg"></i>
+                        </div>
+                        <h2 class="text-lg font-bold text-slate-800">계정 연결 상태</h2>
+                    </div>
                     {% if has_token %}
-                    <span class="flex items-center px-3 py-1 rounded-full bg-green-100 text-green-700 text-xs font-bold">
-                        <span class="w-1.5 h-1.5 rounded-full bg-green-500 mr-2"></span> 연결됨
+                    <span class="flex items-center px-4 py-1.5 rounded-full bg-green-50 text-green-600 text-xs font-bold border border-green-100">
+                        <span class="w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse"></span> 연결됨
                     </span>
                     {% else %}
-                    <span class="flex items-center px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-bold">
-                        <span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-2"></span> 연결 필요
+                    <span class="flex items-center px-4 py-1.5 rounded-full bg-amber-50 text-amber-600 text-xs font-bold border border-amber-100">
+                        <span class="w-2 h-2 rounded-full bg-amber-500 mr-2"></span> 연결 필요
                     </span>
                     {% endif %}
                 </div>
 
                 {% if has_token %}
-                <p class="text-sm text-slate-500 mb-6">이미 Microsoft 계정이 연결되어 있습니다. 다시 연결하려면 아래 버튼을 클릭하세요.</p>
+                <div class="bg-slate-50 rounded-2xl p-4 mb-8 border border-slate-100">
+                    <p class="text-sm text-slate-600 leading-relaxed font-medium">
+                        <i class="fas fa-info-circle mr-2 text-blue-400"></i>
+                        이미 Microsoft 계정이 연결되어 있습니다. 다시 연결하려면 아래 버튼을 클릭하세요.
+                    </p>
+                </div>
                 {% else %}
-                <p class="text-sm text-slate-500 mb-6">할 일 목록을 가져오려면 먼저 Microsoft 계정으로 로그인해야 합니다.</p>
+                <p class="text-sm text-slate-500 mb-8 font-medium">할 일 목록을 가져오려면 먼저 Microsoft 계정으로 로그인해야 합니다.</p>
                 {% endif %}
 
                 {% if client_id and client_secret %}
                 <a href="{{ url_for('auth_login') }}" 
-                   class="w-full inline-flex items-center justify-center px-6 py-3 bg-[#0078d4] hover:bg-[#005a9e] text-white font-semibold rounded-xl transition-all shadow-md hover:shadow-lg">
-                    <i class="fab fa-microsoft mr-3 text-lg"></i>
+                   class="w-full inline-flex items-center justify-center px-6 py-4 bg-[#0078d4] hover:bg-[#005a9e] text-white font-bold rounded-2xl transition-all shadow-lg shadow-blue-500/20 active:scale-[0.98]">
+                    <i class="fab fa-microsoft mr-3 text-xl"></i>
                     Microsoft 계정으로 로그인
                 </a>
                 {% else %}
-                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
-                    <p class="text-sm text-slate-400 italic">먼저 API 설정을 완료하세요.</p>
+                <div class="bg-slate-50 border border-slate-200 border-dashed rounded-2xl p-6 text-center">
+                    <i class="fas fa-lock text-slate-300 text-2xl mb-3"></i>
+                    <p class="text-sm text-slate-400 font-semibold">먼저 API 설정을 완료하세요.</p>
                 </div>
                 {% endif %}
             </div>
         </div>
 
-        <!-- 2. API 상세 설정 (상세 정보 클릭 시 열림) -->
-        <details class="group bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-            <summary class="list-none p-6 cursor-pointer flex items-center justify-between">
-                <h2 class="text-lg font-semibold text-slate-800">API 고급 설정</h2>
-                <span class="text-slate-400 transition-transform group-open:rotate-180">
-                    <i class="fas fa-chevron-down"></i>
+        <!-- 2. API 상세 설정 -->
+        <details class="group bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+            <summary class="list-none p-8 cursor-pointer flex items-center justify-between hover:bg-slate-50 transition-colors">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 group-open:bg-blue-50 group-open:text-blue-500 transition-colors">
+                        <i class="fas fa-key text-lg"></i>
+                    </div>
+                    <h2 class="text-lg font-bold text-slate-800">API 고급 설정</h2>
+                </div>
+                <span class="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 transition-transform group-open:rotate-180 group-open:text-blue-500">
+                    <i class="fas fa-chevron-down text-xs"></i>
                 </span>
             </summary>
-            <div class="px-6 pb-6 pt-0">
-                <form method="POST" class="space-y-4">
+            <div class="px-8 pb-8 pt-2">
+                <form method="POST" class="space-y-6">
                     <div>
-                        <label for="client_id" class="block text-sm font-medium text-slate-700 mb-1">Application (client) ID</label>
-                        <input type="text" id="client_id" name="client_id" value="{{ client_id }}" 
-                               class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm font-mono"
-                               required>
+                        <label for="client_id" class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider ml-1">Application (client) ID</label>
+                        <div class="relative">
+                            <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300">
+                                <i class="fas fa-fingerprint"></i>
+                            </div>
+                            <input type="text" id="client_id" name="client_id" value="{{ client_id }}" 
+                                   class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all text-sm font-mono font-medium"
+                                   placeholder="Azure AD Client ID"
+                                   required>
+                        </div>
                     </div>
                     <div>
-                        <label for="client_secret" class="block text-sm font-medium text-slate-700 mb-1">Client Secret</label>
-                        <input type="password" id="client_secret" name="client_secret" value="{{ client_secret }}" 
-                               class="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-sm font-mono"
-                               required>
+                        <label for="client_secret" class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider ml-1">Client Secret</label>
+                        <div class="relative">
+                            <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300">
+                                <i class="fas fa-shield-alt"></i>
+                            </div>
+                            <input type="password" id="client_secret" name="client_secret" value="{{ client_secret }}" 
+                                   class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all text-sm font-mono font-medium"
+                                   placeholder="Azure AD Client Secret"
+                                   required>
+                        </div>
                     </div>
-                    <div class="bg-blue-50 rounded-lg p-4 mb-4">
-                        <h4 class="text-xs font-bold text-blue-800 mb-1 uppercase tracking-wider"><i class="fas fa-info-circle mr-1"></i> Azure Portal 설정 도움말</h4>
-                        <p class="text-xs text-blue-600 leading-relaxed">
-                            Azure AD에서 새 앱을 등록하고 <code class="bg-white px-1 rounded border border-blue-100">Tasks.ReadWrite</code> 권한을 부여하세요.
-                            Redirect URI는 현재 서비스 주소의 <code>/auth/callback</code>으로 설정해야 합니다.
+                    <div class="bg-blue-50/50 rounded-2xl p-5 border border-blue-100/50">
+                        <h4 class="text-[11px] font-extrabold text-blue-700 mb-2 uppercase tracking-[0.1em] flex items-center">
+                            <i class="fas fa-lightbulb mr-2 opacity-70"></i> Azure Portal 가이드
+                        </h4>
+                        <p class="text-xs text-blue-600/80 leading-relaxed font-medium">
+                            Azure AD 앱 등록 시 <code class="bg-white/80 px-1.5 py-0.5 rounded border border-blue-100 font-bold text-blue-700">Tasks.ReadWrite</code> 권한이 필요합니다.
+                            Redirect URI는 <code>/auth/callback</code> 경로로 설정하세요.
                         </p>
                     </div>
                     <button type="submit" 
-                            class="w-full px-6 py-2 bg-slate-800 hover:bg-slate-700 text-white font-medium rounded-lg transition-colors text-sm">
-                        API 설정 저장
+                            class="w-full px-6 py-4 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-2xl transition-all shadow-lg shadow-slate-200 active:scale-[0.98]">
+                        <i class="fas fa-save mr-2"></i> API 설정 저장
                     </button>
                 </form>
             </div>
         </details>
         
-        <p class="text-center text-xs text-slate-400 mt-8">
-            &copy; 2026 MS To Do Web App Helper
-        </p>
+        <div class="mt-12 text-center">
+            <p class="text-xs font-bold text-slate-300 uppercase tracking-widest">
+                &copy; 2026 MS To Do Helper
+            </p>
+        </div>
     </div>
 </body>
 </html>
