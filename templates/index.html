@@ -84,9 +84,15 @@
 
     <script>
         let currentListId = null;
+        let allListIds = [null];
         let lastActivity = Date.now();
         let refreshSecondsLeft = 10;
         let isProcessing = false;
+
+        // Swipe Gesture Variables
+        let touchStartX = 0;
+        let touchEndX = 0;
+        const minSwipeDistance = 50;
 
         // Auto Refresh logic
         setInterval(() => {
@@ -118,12 +124,14 @@
                 const lists = await response.json();
                 const container = document.getElementById('list-container');
                 
-                // Keep "All" and add others
+                // Reset and keep "All"
+                allListIds = [null];
                 const allChip = document.getElementById('chip-all');
                 container.innerHTML = '';
                 container.appendChild(allChip);
 
                 lists.forEach(list => {
+                    allListIds.push(list.id);
                     const chip = document.createElement('div');
                     chip.id = `chip-${list.id}`;
                     chip.className = 'chip px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-sm font-semibold shadow-sm transition-all';
@@ -138,13 +146,53 @@
             currentListId = id;
             // Update UI
             document.querySelectorAll('.chip').forEach(c => c.classList.remove('active', 'ring-2', 'ring-blue-500/20', 'border-blue-500'));
+            
+            let activeChip;
             if (id === null) {
-                document.getElementById('chip-all').classList.add('active');
+                activeChip = document.getElementById('chip-all');
             } else {
-                const activeChip = document.getElementById(`chip-${id}`);
-                if (activeChip) activeChip.classList.add('active');
+                activeChip = document.getElementById(`chip-${id}`);
+            }
+
+            if (activeChip) {
+                activeChip.classList.add('active');
+                // Scroll active chip into view
+                activeChip.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
             }
             fetchTasks();
+        }
+
+        // Swipe Detection Logic
+        document.addEventListener('touchstart', e => {
+            touchStartX = e.changedTouches[0].screenX;
+        }, { passive: true });
+
+        document.addEventListener('touchend', e => {
+            touchEndX = e.changedTouches[0].screenX;
+            handleSwipe();
+        }, { passive: true });
+
+        function handleSwipe() {
+            const swipeDistance = touchEndX - touchStartX;
+            if (Math.abs(swipeDistance) < minSwipeDistance) return;
+
+            // Prevent swipe when user is interacting with input
+            if (document.activeElement === document.getElementById('task-input')) return;
+
+            const currentIndex = allListIds.indexOf(currentListId);
+            if (currentIndex === -1) return;
+
+            if (swipeDistance > 0) {
+                // Swipe Right (Go to Previous List)
+                if (currentIndex > 0) {
+                    selectList(allListIds[currentIndex - 1]);
+                }
+            } else {
+                // Swipe Left (Go to Next List)
+                if (currentIndex < allListIds.length - 1) {
+                    selectList(allListIds[currentIndex + 1]);
+                }
+            }
         }
 
         async function fetchTasks(silent = false) {
