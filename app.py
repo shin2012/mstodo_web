@@ -26,11 +26,22 @@ def save_config(config):
 def get_todo_client():
     config = get_config()
     try:
+        if not config.has_option('connect', 'client_id') or \
+           not config.has_option('connect', 'client_secret') or \
+           not config.has_option('connect', 'client_token'):
+            return None
+            
         client_id = config.get('connect', 'client_id')
         client_secret = config.get('connect', 'client_secret')
-        client_token = eval(config.get('connect', 'client_token'))
+        token_str = config.get('connect', 'client_token')
+        
+        if not token_str or token_str == 'None' or token_str == '':
+            return None
+            
+        client_token = eval(token_str)
         return ToDoConnection(client_id=client_id, client_secret=client_secret, token=client_token)
-    except (configparser.NoOptionError, Exception):
+    except Exception as e:
+        print(f"Error initializing client: {e}")
         return None
 
 @app.route('/')
