@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>설정 - MS To-Do Web</title>
+    <style>
+        body { font-family: sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; line-height: 1.6; }
+        .card { border: 1px solid #ddd; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], input[type="password"] { width: 100%; padding: 8px; box-sizing: border-box; }
+        button { background: #0078d4; color: white; border: none; padding: 10px 15px; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #005a9e; }
+        .status { margin-top: 20px; padding: 10px; border-radius: 4px; }
+        .status.ok { background: #dff6dd; color: #107c10; }
+        .status.warn { background: #fff4ce; color: #797775; }
+        .btn-auth { display: inline-block; background: #2b5797; color: white; text-decoration: none; padding: 10px 15px; border-radius: 4px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>설정</h1>
+    <div class="card">
+        <form method="POST">
+            <div class="form-group">
+                <label for="client_id">Client ID</label>
+                <input type="text" id="client_id" name="client_id" value="{{ client_id }}" required>
+            </div>
+            <div class="form-group">
+                <label for="client_secret">Client Secret</label>
+                <input type="password" id="client_secret" name="client_secret" value="{{ client_secret }}" required>
+            </div>
+            <button type="submit">저장</button>
+        </form>
+
+        <div class="status {% if has_token %}ok{% else %}warn{% endif %}">
+            {% if has_token %}
+                <strong>상태:</strong> 인증됨 (토큰 보유중)
+            {% else %}
+                <strong>상태:</strong> 인증 필요 (토큰 없음)
+            {% endif %}
+        </div>
+
+        {% if client_id and client_secret %}
+        <div style="margin-top: 20px;">
+            <h3>마이크로소프트 로그인</h3>
+            <p>Azure portal에서 설정한 Redirect URI가 현재 접속 주소의 <code>/auth/callback</code>인지 확인하세요.</p>
+            <a href="{{ url_for('auth_login') }}" class="btn-auth">MS 계정으로 로그인</a>
+        </div>
+        {% endif %}
+        
+        <div style="margin-top: 20px;">
+            <a href="{{ url_for('index') }}">← 메인 화면으로 돌아가기</a>
+        </div>
+    </div>
+</body>
+</html>
