@@ -3,9 +3,11 @@ import configparser
 import json
 import secrets
 from flask import Flask, render_template, jsonify, request, redirect, url_for, session
+from werkzeug.middleware.proxy_fix import ProxyFix
 from pymstodo import ToDoConnection
 
 app = Flask(__name__)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.secret_key = os.environ.get('SECRET_KEY', secrets.token_hex(24))
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -76,12 +78,12 @@ def auth_login():
     try:
         client_id = config.get('connect', 'client_id')
         # 현재 요청의 도메인을 기반으로 redirect_uri 생성
-        # (예: http://10.0.0.99:5001/auth/callback)
         redirect_uri = url_for('auth_callback', _external=True)
         
-        # ToDoConnection 인스턴스를 생성하여 redirect_uri를 명시적으로 전달
-        # pymstodo의 버전에 따라 static 메서드 대신 인스턴스 메서드 사용 권장
-        auth_url = ToDoConnection.get_auth_url(client_id, redirect_uri=redirect_uri)
+        # ToDoConnection._redirect를 명시적으로 설정
+        ToDoConnection._redirect = redirect_uri
+        
+        auth_url = ToDoConnection.get_auth_url(client_id)
         return redirect(auth_url)
     except Exception as e:
         return f"Login Error: {str(e)}", 400
@@ -89,14 +91,17 @@ def auth_login():
 @app.route('/auth/callback')
 def auth_callback():
     # Microsoft에서 돌아올 때의 URL 전체를 사용
-    redirect_uri = request.url
+    callback_url = request.url
     config = get_config()
     try:
         client_id = config.get('connect', 'client_id')
         client_secret = config.get('connect', 'client_secret')
         
-        # 토큰 교환 시에도 동일한 redirect_uri (현재 URL) 사용
-        token = ToDoConnection.get_token(client_id, client_secret, redirect_uri)
+        # 토큰 교환 시에도 OAuth2Session 초기화에 사용되는 redirect_uri를 설정해야 함
+        ToDoConnection._redirect = url_for('auth_callback', _external=True)
+        
+        # 토큰 교환 (redirect_resp 인자에 callback_url 전달)
+        token = ToDoConnection.get_token(client_id, client_secret, callback_url)
         
         config.set('connect', 'client_token', str(token))
         save_config(config)
