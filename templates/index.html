@@ -18,6 +18,8 @@
         /* Hide scrollbar */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        #list-container { cursor: grab; user-select: none; }
+        #list-container:active { cursor: grabbing; }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -39,7 +41,7 @@
             </div>
 
             <!-- List Selection (Chips) -->
-            <div id="list-container" class="flex overflow-x-auto space-x-2 pb-2 no-scrollbar mb-6">
+            <div id="list-container" class="flex overflow-x-auto space-x-2 pb-2 no-scrollbar mb-6 select-none">
                 <div onclick="selectList(null)" id="chip-all" class="chip active px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-sm font-semibold shadow-sm">
                     <i class="fas fa-layer-group mr-2 opacity-50"></i>전체
                 </div>
@@ -338,6 +340,41 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            const listContainer = document.getElementById('list-container');
+            
+            // Mouse wheel horizontal scroll
+            listContainer.addEventListener('wheel', (evt) => {
+                if (evt.deltaY !== 0) {
+                    evt.preventDefault();
+                    listContainer.scrollLeft += evt.deltaY;
+                }
+            });
+
+            // Mouse drag scroll
+            let isDown = false;
+            let startX;
+            let scrollLeft;
+
+            listContainer.addEventListener('mousedown', (e) => {
+                isDown = true;
+                listContainer.classList.add('active-drag');
+                startX = e.pageX - listContainer.offsetLeft;
+                scrollLeft = listContainer.scrollLeft;
+            });
+            listContainer.addEventListener('mouseleave', () => {
+                isDown = false;
+            });
+            listContainer.addEventListener('mouseup', () => {
+                isDown = false;
+            });
+            listContainer.addEventListener('mousemove', (e) => {
+                if(!isDown) return;
+                e.preventDefault();
+                const x = e.pageX - listContainer.offsetLeft;
+                const walk = (x - startX) * 2; // scroll-fast
+                listContainer.scrollLeft = scrollLeft - walk;
+            });
+
             fetchLists();
             fetchTasks();
         });
