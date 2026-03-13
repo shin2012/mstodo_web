@@ -2,6 +2,8 @@ import os
 import configparser
 import json
 import secrets
+import requests
+import ast
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 from flask import Flask, render_template, jsonify, request, redirect, url_for, session
@@ -22,7 +24,6 @@ def get_config():
     if not config.has_section('connect'):
         config.add_section('connect')
     
-    # 환경 변수가 있으면 우선적으로 설정 (UI에서 입력하지 않아도 되도록)
     env_id = os.environ.get('MS_CLIENT_ID')
     env_secret = os.environ.get('MS_CLIENT_SECRET')
     if env_id: config.set('connect', 'client_id', env_id)
@@ -34,18 +35,27 @@ def save_config(config):
     with open(CONFIG_FILE, 'w') as configfile:
         config.write(configfile)
 
+def load_token():
+    config = get_config()
+    token_str = config.get('connect', 'client_token', fallback=None)
+    if token_str and token_str != 'None':
+        try:
+            return ast.literal_eval(token_str)
+        except:
+            return None
+    return None
+
 def get_todo_client():
     config = get_config()
     try:
         client_id = config.get('connect', 'client_id', fallback=None)
         client_secret = config.get('connect', 'client_secret', fallback=None)
-        token_str = config.get('connect', 'client_token', fallback=None)
+        token = load_token()
         
-        if not client_id or not client_secret or not token_str or token_str == 'None':
+        if not client_id or not client_secret or not token:
             return None
             
-        client_token = eval(token_str)
-        return ToDoConnection(client_id=client_id, client_secret=client_secret, token=client_token)
+        return ToDoConnection(client_id=client_id, client_secret=client_secret, token=token)
     except Exception as e:
         print(f"Error initializing client: {e}")
         return None
@@ -70,7 +80,7 @@ def settings():
 
     client_id = config.get('connect', 'client_id', fallback='')
     client_secret = config.get('connect', 'client_secret', fallback='')
-    has_token = config.has_option('connect', 'client_token')
+    has_token = load_token() is not None
     
     return render_template('settings.html', client_id=client_id, client_secret=client_secret, has_token=has_token)
 
@@ -79,32 +89,20 @@ def auth_login():
     config = get_config()
     try:
         client_id = config.get('connect', 'client_id')
-        # 현재 요청의 도메인을 기반으로 redirect_uri 생성
-        redirect_uri = url_for('auth_callback', _external=True)
-        
-        # ToDoConnection._redirect를 명시적으로 설정
-        ToDoConnection._redirect = redirect_uri
-        
-        auth_url = ToDoConnection.get_auth_url(client_id)
-        return redirect(auth_url)
+        ToDoConnection._redirect = url_for('auth_callback', _external=True)
+        return redirect(ToDoConnection.get_auth_url(client_id))
     except Exception as e:
         return f"Login Error: {str(e)}", 400
 
 @app.route('/auth/callback')
 def auth_callback():
-    # Microsoft에서 돌아올 때의 URL 전체를 사용
     callback_url = request.url
     config = get_config()
     try:
         client_id = config.get('connect', 'client_id')
         client_secret = config.get('connect', 'client_secret')
-        
-        # 토큰 교환 시에도 OAuth2Session 초기화에 사용되는 redirect_uri를 설정해야 함
         ToDoConnection._redirect = url_for('auth_callback', _external=True)
-        
-        # 토큰 교환 (redirect_resp 인자에 callback_url 전달)
         token = ToDoConnection.get_token(client_id, client_secret, callback_url)
-        
         config.set('connect', 'client_token', str(token))
         save_config(config)
         return redirect(url_for('index'))
@@ -117,20 +115,18 @@ def get_lists():
     if not client: return jsonify({"error": "Not authenticated"}), 401
     try:
         lists = client.get_lists()
-        # Include wellKnownName for categorization
-        return jsonify([{
-            'id': l.list_id, 
-            'name': l.displayName,
-            'wellKnownName': getattr(l, 'wellKnownName', 'none')
-        } for l in lists])
+        return jsonify([{'id': l.list_id, 'name': l.displayName, 'wellKnownName': getattr(l, 'wellKnownName', 'none')} for l in lists])
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/tasks')
 def get_tasks():
-    client = get_todo_client()
-    if not client: return jsonify({"error": "Not authenticated"}), 401
+    token_data = load_token()
+    if not token_data: return jsonify({"error": "Not authenticated"}), 401
     
+    client = get_todo_client()
+    if not client: return jsonify({"error": "Client init failed"}), 500
+
     list_id = request.args.get('list_id')
     try:
         lists = client.get_lists()
@@ -138,52 +134,87 @@ def get_tasks():
             lists = [l for l in lists if l.list_id == list_id]
 
         all_tasks = []
-        
-        def fetch_list_tasks(task_list):
-            try:
-                tasks = client.get_tasks(task_list.list_id, status='notCompleted')
-                results = []
-                for task in tasks:
-                    due_date = None
-                    if task.dueDateTime:
-                        try:
-                            # Microsoft API는 보통 'YYYY-MM-DDTHH:MM:SS.mmmmmmm' 형식 제공
-                            dt_str = task.dueDateTime['dateTime'].split('.')[0]
-                            dt = datetime.strptime(dt_str, '%Y-%m-%dT%H:%M:%S')
-                            # KST 보정 (+9시간)
-                            kst_dt = dt + timedelta(hours=9)
-                            due_date = kst_dt.strftime('%Y-%m-%d')
-                        except Exception as e:
-                            print(f"Date parsing error: {e}")
-                            due_date = task.dueDateTime['dateTime'].split('T')[0]
-                    
-                    results.append({
-                        'id': task.task_id,
-                        'list_id': task_list.list_id,
-                        'list_name': task_list.displayName,
-                        'title': task.title,
-                        'due_date': due_date,
-                        'status': task.status,
-                        'importance': task.importance
-                    })
-                return results
-            except Exception as e:
-                print(f"Error fetching tasks for list {task_list.displayName}: {e}")
-                return []
+        access_token = token_data.get('access_token')
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
 
-        # Use ThreadPoolExecutor for parallel task fetching
-        with ThreadPoolExecutor(max_workers=10) as executor:
-            results = list(executor.map(fetch_list_tasks, lists))
-            for task_list_results in results:
-                all_tasks.extend(task_list_results)
+        # 리스트를 20개씩 끊어서 Batch 처리
+        for i in range(0, len(lists), 20):
+            chunk = lists[i:i+20]
+            requests_payload = []
+            for idx, task_list in enumerate(chunk):
+                requests_payload.append({
+                    "id": str(idx),
+                    "method": "GET",
+                    "url": f"/me/todo/lists/{task_list.list_id}/tasks?$filter=status ne 'completed'&$expand=checklistItems"
+                })
+            
+            batch_resp = requests.post("https://graph.microsoft.com/v1.0/$batch", 
+                                     json={"requests": requests_payload}, 
+                                     headers=headers)
+            
+            if batch_resp.status_code == 200:
+                responses = batch_resp.json().get('responses', [])
+                for resp in responses:
+                    original_idx = int(resp.get('id'))
+                    task_list = chunk[original_idx]
+                    if resp.get('status') == 200:
+                        tasks_data = resp.get('body', {}).get('value', [])
+                        for task in tasks_data:
+                            due_date = None
+                            if task.get('dueDateTime'):
+                                try:
+                                    dt_str = task['dueDateTime']['dateTime'].split('.')[0]
+                                    dt = datetime.strptime(dt_str, '%Y-%m-%dT%H:%M:%S')
+                                    kst_dt = dt + timedelta(hours=9)
+                                    due_date = kst_dt.strftime('%Y-%m-%d')
+                                except:
+                                    due_date = task['dueDateTime']['dateTime'].split('T')[0]
+                            
+                            all_tasks.append({
+                                'id': task['id'],
+                                'list_id': task_list.list_id,
+                                'list_name': task_list.displayName,
+                                'title': task['title'],
+                                'due_date': due_date,
+                                'status': task['status'],
+                                'importance': task['importance'],
+                                'subtasks': task.get('checklistItems', [])
+                            })
         
-        # 전체 조회 시 리스트 이름별로 그룹화하기 위해 정렬 순서 변경
         if not list_id:
             all_tasks.sort(key=lambda x: (x['list_name'], x['due_date'] is None, x['due_date']))
         else:
             all_tasks.sort(key=lambda x: (x['due_date'] is None, x['due_date']))
             
         return jsonify(all_tasks)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/subtask/complete/<list_id>/<task_id>/<subtask_id>', methods=['POST'])
+def complete_subtask(list_id, task_id, subtask_id):
+    token_data = load_token()
+    if not token_data: return jsonify({"error": "Not authenticated"}), 401
+    
+    data = request.json
+    is_checked = data.get('checked', False)
+    
+    try:
+        access_token = token_data.get('access_token')
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        url = f"https://graph.microsoft.com/v1.0/me/todo/lists/{list_id}/tasks/{task_id}/checklistItems/{subtask_id}"
+        resp = requests.patch(url, json={"isChecked": is_checked}, headers=headers)
+        if resp.status_code in [200, 204]:
+            return jsonify({"success": True})
+        else:
+            return jsonify({"error": resp.text}), resp.status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
