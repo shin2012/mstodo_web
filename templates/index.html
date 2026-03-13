@@ -8,13 +8,82 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Noto+Sans+KR:wght@300;400;500;700&display=swap');
-        body { font-family: 'Inter', 'Noto Sans KR', sans-serif; background-color: #f8fafc; }
-        .task-card { transition: all 0.2s ease; }
-        .task-card:hover { transform: translateY(-1px); box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05); }
+        body { 
+            font-family: 'Inter', 'Noto Sans KR', sans-serif; 
+            background-color: #f1f5f9; 
+            margin: 0;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        /* Animated Background */
+        .bg-animate {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(135deg, #f8fafc 0%, #eef2f7 100%);
+            overflow: hidden;
+        }
+        
+        .blob {
+            position: absolute;
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.07) 0%, rgba(59, 130, 246, 0) 70%);
+            border-radius: 50%;
+            filter: blur(80px);
+            animation: move 25s infinite alternate ease-in-out;
+        }
+        
+        .blob-2 {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.07) 0%, rgba(99, 102, 241, 0) 70%);
+            top: 20%;
+            right: -10%;
+            animation-duration: 35s;
+            animation-delay: -5s;
+        }
+        
+        .blob-3 {
+            width: 700px;
+            height: 700px;
+            background: radial-gradient(circle, rgba(147, 197, 253, 0.08) 0%, rgba(147, 197, 253, 0) 70%);
+            bottom: -20%;
+            left: 10%;
+            animation-duration: 40s;
+            animation-delay: -10s;
+        }
+
+        @keyframes move {
+            0% { transform: translate(-5%, -5%) rotate(0deg); }
+            100% { transform: translate(10%, 10%) rotate(180deg); }
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.65);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.03);
+        }
+
+        .task-card { 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            background: rgba(255, 255, 255, 0.8);
+        }
+        .task-card:hover { 
+            transform: translateY(-2px) scale(1.01); 
+            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.06); 
+            background: white;
+        }
         .completed { text-decoration: line-through; color: #94a3b8; opacity: 0.6; }
         .fade-out { opacity: 0; transform: translateX(20px); transition: all 0.4s ease; }
         .chip { transition: all 0.2s; cursor: pointer; white-space: nowrap; }
-        .chip.active { background-color: #3b82f6; color: white; border-color: #3b82f6; }
+        .chip.active { background-color: #3b82f6; color: white; border-color: #3b82f6; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2); }
         /* Hide scrollbar */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -23,17 +92,28 @@
     </style>
 </head>
 <body class="p-4 md:p-8">
-    <div class="max-w-3xl mx-auto">
-        <header class="mb-6">
-            <div class="flex justify-between items-center mb-4">
-                <div class="flex items-center space-x-3">
-                    <h1 class="text-2xl font-extrabold text-slate-800 tracking-tight">나의 할 일</h1>
-                    <a href="/settings" class="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-blue-600 transition-all" title="설정">
+    <div class="bg-animate">
+        <div class="blob"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+    <div class="max-w-3xl mx-auto relative">
+        <header class="mb-8">
+            <div class="flex justify-between items-center mb-6">
+                <div class="flex items-center space-x-4">
+                    <div class="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+                        <i class="fas fa-check-double text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-black text-slate-800 tracking-tight leading-none">나의 할 일</h1>
+                        <p class="text-[11px] font-bold text-slate-400 mt-1 uppercase tracking-wider">Workspace Dashboard</p>
+                    </div>
+                    <a href="/settings" class="ml-2 w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-white hover:text-blue-600 transition-all border border-transparent hover:border-slate-200" title="설정">
                         <i class="fas fa-cog text-lg"></i>
                     </a>
                 </div>
                 <div class="flex items-center space-x-2">
-                    <button onclick="fetchTasks()" class="flex items-center space-x-2 px-3 py-1.5 bg-white border border-slate-200 rounded-full hover:border-blue-300 hover:shadow-sm transition-all group">
+                    <button onclick="fetchTasks()" class="flex items-center space-x-2 px-3 py-1.5 bg-white/50 backdrop-blur-sm border border-slate-200/50 rounded-full hover:bg-white hover:border-blue-300 hover:shadow-sm transition-all group">
                         <span id="auto-refresh-timer" class="text-xs font-mono font-bold text-slate-500 group-hover:text-blue-600">10s</span>
                         <i class="fas fa-sync-alt text-xs text-slate-300 group-hover:text-blue-500" id="refresh-icon"></i>
                     </button>
@@ -41,8 +121,8 @@
             </div>
 
             <!-- List Selection (Chips) -->
-            <div id="list-container" class="flex overflow-x-auto space-x-2 pb-2 no-scrollbar mb-6 select-none">
-                <div onclick="selectList(null)" id="chip-all" class="chip active px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-sm font-semibold shadow-sm">
+            <div id="list-container" class="flex overflow-x-auto space-x-2 pb-3 no-scrollbar mb-8 select-none">
+                <div onclick="selectList(null)" id="chip-all" class="chip active px-5 py-2.5 rounded-2xl border border-slate-200 bg-white text-slate-600 text-sm font-bold shadow-sm">
                     <i class="fas fa-layer-group mr-2 opacity-50"></i>전체
                 </div>
                 <!-- Lists will be injected here -->
@@ -50,37 +130,37 @@
 
             <!-- Task Input -->
             <div class="relative group">
-                <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors">
-                    <i class="fas fa-pen-nib"></i>
+                <div class="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors">
+                    <i class="fas fa-plus-circle text-lg"></i>
                 </div>
                 <input type="text" id="task-input" 
                        placeholder="어떤 일을 완료할까요?"
-                       class="w-full pl-11 pr-12 py-4 bg-white border border-slate-200 rounded-2xl shadow-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all text-slate-700 font-medium"
+                       class="w-full pl-12 pr-14 py-5 bg-white/70 backdrop-blur-md border border-slate-200 rounded-[24px] shadow-sm focus:ring-8 focus:ring-blue-500/5 focus:border-blue-500/50 outline-none transition-all text-slate-700 font-semibold placeholder:text-slate-400 placeholder:font-medium"
                        onkeypress="if(event.key === 'Enter') addTask()">
-                <button onclick="addTask()" class="absolute right-2 top-2 bottom-2 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95">
-                    <i class="fas fa-plus"></i>
+                <button onclick="addTask()" class="absolute right-2.5 top-2.5 bottom-2.5 px-5 bg-blue-500 hover:bg-blue-600 text-white rounded-[18px] transition-all shadow-lg shadow-blue-500/20 hover:shadow-blue-500/40 active:scale-95">
+                    <i class="fas fa-arrow-up"></i>
                 </button>
             </div>
         </header>
 
         <div id="loading" class="flex flex-col items-center justify-center py-24 space-y-4">
-            <div class="relative w-12 h-12">
-                <div class="absolute inset-0 border-4 border-blue-100 rounded-full"></div>
-                <div class="absolute inset-0 border-4 border-blue-500 rounded-full border-t-transparent animate-spin"></div>
+            <div class="relative w-14 h-14">
+                <div class="absolute inset-0 border-4 border-blue-500/10 rounded-2xl"></div>
+                <div class="absolute inset-0 border-4 border-blue-500 rounded-2xl border-t-transparent animate-spin"></div>
             </div>
-            <p class="text-sm font-medium text-slate-400 animate-pulse">할 일을 불러오는 중...</p>
+            <p class="text-xs font-bold text-slate-400 animate-pulse tracking-widest uppercase">데이터를 동기화 중...</p>
         </div>
 
-        <div id="task-list" class="space-y-3 hidden">
+        <div id="task-list" class="space-y-3.5 hidden">
             <!-- Tasks will be injected here -->
         </div>
 
-        <div id="empty-state" class="hidden flex flex-col items-center justify-center py-24 bg-white rounded-3xl border border-dashed border-slate-200 shadow-inner">
-            <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
-                <i class="fas fa-check-double text-slate-200 text-4xl"></i>
+        <div id="empty-state" class="hidden flex flex-col items-center justify-center py-28 glass-panel rounded-[40px] border border-dashed border-slate-300/50">
+            <div class="w-24 h-24 bg-blue-50 rounded-full flex items-center justify-center mb-8 shadow-inner">
+                <i class="fas fa-mug-hot text-blue-200 text-4xl"></i>
             </div>
-            <h3 class="text-lg font-bold text-slate-700 mb-1">모든 할 일을 마쳤습니다!</h3>
-            <p class="text-slate-400 text-sm">새로운 할 일을 추가하고 오늘을 기록해보세요.</p>
+            <h3 class="text-xl font-black text-slate-800 mb-2">오늘의 할 일을 모두 마쳤습니다!</h3>
+            <p class="text-slate-400 text-sm font-medium">커피 한 잔의 여유를 즐겨보세요.</p>
         </div>
     </div>
 

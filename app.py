@@ -2,6 +2,7 @@ import os
 import configparser
 import json
 import secrets
+from concurrent.futures import ThreadPoolExecutor
 from flask import Flask, render_template, jsonify, request, redirect, url_for, session
 from werkzeug.middleware.proxy_fix import ProxyFix
 from pymstodo import ToDoConnection
@@ -126,23 +127,29 @@ def get_tasks():
     
     list_id = request.args.get('list_id')
     try:
-        all_tasks = []
         lists = client.get_lists()
-        for task_list in lists:
-            if list_id and task_list.list_id != list_id:
-                continue
-                
+        if list_id:
+            lists = [l for l in lists if l.list_id == list_id]
+
+        all_tasks = []
+        
+        def fetch_list_tasks(task_list):
             tasks = client.get_tasks(task_list.list_id, status='notCompleted')
-            for task in tasks:
-                all_tasks.append({
-                    'id': task.task_id,
-                    'list_id': task_list.list_id,
-                    'list_name': task_list.displayName,
-                    'title': task.title,
-                    'due_date': task.dueDateTime['dateTime'] if task.dueDateTime else None,
-                    'status': task.status,
-                    'importance': task.importance
-                })
+            return [{
+                'id': task.task_id,
+                'list_id': task_list.list_id,
+                'list_name': task_list.displayName,
+                'title': task.title,
+                'due_date': task.dueDateTime['dateTime'] if task.dueDateTime else None,
+                'status': task.status,
+                'importance': task.importance
+            } for task in tasks]
+
+        # Use ThreadPoolExecutor for parallel task fetching
+        with ThreadPoolExecutor(max_workers=10) as executor:
+            results = list(executor.map(fetch_list_tasks, lists))
+            for task_list_results in results:
+                all_tasks.extend(task_list_results)
         
         all_tasks.sort(key=lambda x: (x['due_date'] is None, x['due_date']))
         return jsonify(all_tasks)
