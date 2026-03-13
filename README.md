@@ -2,17 +2,26 @@
 
 Microsoft To-Do와 연동하여 웹 브라우저에서 할 일을 확인하고 관리할 수 있는 서비스입니다. Flask 기반으로 구축되었으며 Docker를 통해 간편하게 배포할 수 있습니다.
 
-## 주요 기능
+## 🚀 주요 개선 사항 (최근 업데이트)
+- **할 일 로드 성능 최적화**: `ThreadPoolExecutor`를 사용한 병렬 작업 처리(Parallel Fetching)로 할 일 목록 로딩 속도를 대폭 개선했습니다.
+- **모던 UI/UX 디자인**: 
+  - **Pretendard 폰트**: 한국어 가독성에 최적화된 Pretendard 가변 폰트 적용.
+  - **반응형 레이아웃**: 데스크탑 사이드바와 모바일 가로 스크롤 칩 메뉴 제공.
+  - **감각적인 배경**: Mesh Gradient 스타일의 부드러운 애니메이션 배경과 Glassmorphism 효과 적용.
+  - **사용자 편의성**: 초기 디자인의 여유로운 공간감(Spacious Layout)을 복원하여 쾌적한 사용 환경 제공.
+
+## ✨ 주요 기능
 - **웹 인터페이스**: 브라우저를 통해 실시간으로 Microsoft To-Do 할 일 목록 확인 및 관리.
+- **반응형 디자인**: PC와 모바일 모두에 최적화된 화면 구성.
+- **실시간 동기화**: 주기적인 자동 리프레시 기능(Refresh Timer)으로 최신 상태 유지.
 - **Docker 기반**: Docker 및 Docker Compose를 사용하여 환경 격리 및 간편한 배포.
 - **안정적인 서버**: Gunicorn을 사용하여 프로덕션급 웹 서버 환경 제공.
-- **자동 실행**: 시스템 재부팅 시에도 Docker restart 정책에 의해 자동으로 서비스 재개.
 
-## 기술 스택
-- **언어**: Python 3.11
-- **프레임워크**: Flask
+## 🛠 기술 스택
+- **Backend**: Python 3.11, Flask, Concurrent Futures (병렬 처리)
+- **Frontend**: HTML5, Vanilla JS, TailwindCSS, FontAwesome 6, Pretendard Font
 - **WSGI 서버**: Gunicorn
-- **API 연동**: `pymstodo`
+- **API 연동**: `pymstodo` (Microsoft Graph API Wrapper)
 - **컨테이너화**: Docker, Docker Compose
 
 ## Azure AD (Entra ID) 설정 및 Redirect URI 등록

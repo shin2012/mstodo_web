@@ -116,7 +116,12 @@ def get_lists():
     if not client: return jsonify({"error": "Not authenticated"}), 401
     try:
         lists = client.get_lists()
-        return jsonify([{'id': l.list_id, 'name': l.displayName} for l in lists])
+        # Include wellKnownName for categorization
+        return jsonify([{
+            'id': l.list_id, 
+            'name': l.displayName,
+            'wellKnownName': getattr(l, 'wellKnownName', 'none')
+        } for l in lists])
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -134,16 +139,20 @@ def get_tasks():
         all_tasks = []
         
         def fetch_list_tasks(task_list):
-            tasks = client.get_tasks(task_list.list_id, status='notCompleted')
-            return [{
-                'id': task.task_id,
-                'list_id': task_list.list_id,
-                'list_name': task_list.displayName,
-                'title': task.title,
-                'due_date': task.dueDateTime['dateTime'] if task.dueDateTime else None,
-                'status': task.status,
-                'importance': task.importance
-            } for task in tasks]
+            try:
+                tasks = client.get_tasks(task_list.list_id, status='notCompleted')
+                return [{
+                    'id': task.task_id,
+                    'list_id': task_list.list_id,
+                    'list_name': task_list.displayName,
+                    'title': task.title,
+                    'due_date': task.dueDateTime['dateTime'] if task.dueDateTime else None,
+                    'status': task.status,
+                    'importance': task.importance
+                } for task in tasks]
+            except Exception as e:
+                print(f"Error fetching tasks for list {task_list.displayName}: {e}")
+                return []
 
         # Use ThreadPoolExecutor for parallel task fetching
         with ThreadPoolExecutor(max_workers=10) as executor:
