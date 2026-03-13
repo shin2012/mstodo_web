@@ -2,6 +2,7 @@ import os
 import configparser
 import json
 import secrets
+from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 from flask import Flask, render_template, jsonify, request, redirect, url_for, session
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -141,15 +142,31 @@ def get_tasks():
         def fetch_list_tasks(task_list):
             try:
                 tasks = client.get_tasks(task_list.list_id, status='notCompleted')
-                return [{
-                    'id': task.task_id,
-                    'list_id': task_list.list_id,
-                    'list_name': task_list.displayName,
-                    'title': task.title,
-                    'due_date': task.dueDateTime['dateTime'] if task.dueDateTime else None,
-                    'status': task.status,
-                    'importance': task.importance
-                } for task in tasks]
+                results = []
+                for task in tasks:
+                    due_date = None
+                    if task.dueDateTime:
+                        try:
+                            # Microsoft API는 보통 'YYYY-MM-DDTHH:MM:SS.mmmmmmm' 형식 제공
+                            dt_str = task.dueDateTime['dateTime'].split('.')[0]
+                            dt = datetime.strptime(dt_str, '%Y-%m-%dT%H:%M:%S')
+                            # KST 보정 (+9시간)
+                            kst_dt = dt + timedelta(hours=9)
+                            due_date = kst_dt.strftime('%Y-%m-%d')
+                        except Exception as e:
+                            print(f"Date parsing error: {e}")
+                            due_date = task.dueDateTime['dateTime'].split('T')[0]
+                    
+                    results.append({
+                        'id': task.task_id,
+                        'list_id': task_list.list_id,
+                        'list_name': task_list.displayName,
+                        'title': task.title,
+                        'due_date': due_date,
+                        'status': task.status,
+                        'importance': task.importance
+                    })
+                return results
             except Exception as e:
                 print(f"Error fetching tasks for list {task_list.displayName}: {e}")
                 return []

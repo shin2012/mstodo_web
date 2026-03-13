@@ -299,15 +299,27 @@
             }
         }
 
+        function parseDate(dateStr) {
+            if (!dateStr) return null;
+            const parts = dateStr.split('-');
+            // 연, 월(0-11), 일로 Date 객체 생성 (로컬 시간 기준)
+            return new Date(parts[0], parts[1] - 1, parts[2]);
+        }
+
         function renderTasks(tasks) {
             const container = document.getElementById('task-list');
             container.innerHTML = '';
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
             tasks.forEach(task => {
                 const card = document.createElement('div');
                 card.id = `task-${task.id}`;
                 card.className = 'group task-card bg-white p-4 rounded-2xl border border-slate-100 flex items-center space-x-4 shadow-sm transition-all';
                 const isUrgent = task.importance === 'high';
-                const isOverdue = task.due_date && new Date(task.due_date) < new Date(new Date().setHours(0,0,0,0));
+                
+                const dueDate = parseDate(task.due_date);
+                const isOverdue = dueDate && dueDate < today;
                 
                 card.innerHTML = `
                     <div class="flex-shrink-0">
@@ -333,9 +345,11 @@
         }
 
         function formatDate(dateStr) {
-            const d = new Date(dateStr);
+            const d = parseDate(dateStr);
+            if (!d) return '';
             const now = new Date();
-            if (d.toDateString() === now.toDateString()) return '오늘';
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            if (d.getTime() === today.getTime()) return '오늘';
             return (d.getMonth() + 1) + '월 ' + d.getDate() + '일';
         }
 

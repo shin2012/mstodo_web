@@ -3,6 +3,7 @@
 Microsoft To-Do와 연동하여 웹 브라우저에서 할 일을 확인하고 관리할 수 있는 서비스입니다. Flask 기반으로 구축되었으며 Docker를 통해 간편하게 배포할 수 있습니다.
 
 ## 🚀 주요 개선 사항 (최근 업데이트)
+- **완료 시간(KST) 보정**: Microsoft API의 UTC 시간을 한국 표준시(+9시간)로 정확히 변환하여 마감일 표시 오류를 해결했습니다.
 - **할 일 로드 성능 최적화**: `ThreadPoolExecutor`를 사용한 병렬 작업 처리(Parallel Fetching)로 할 일 목록 로딩 속도를 대폭 개선했습니다.
 - **모던 UI/UX 디자인**: 
   - **Pretendard 폰트**: 한국어 가독성에 최적화된 Pretendard 가변 폰트 적용.
