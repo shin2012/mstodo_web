@@ -107,10 +107,10 @@
                         <a href="/settings" class="w-9 h-9 flex items-center justify-center rounded-full text-slate-400 hover:bg-white hover:text-blue-600 transition-all border border-transparent hover:border-slate-200" title="설정">
                             <i class="fas fa-cog text-xl"></i>
                         </a>
-                        <div class="flex items-center space-x-2 bg-white/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-slate-200/50 shadow-sm">
-                            <span id="auto-refresh-timer-desktop" class="text-xs font-mono font-bold text-slate-500">10s</span>
-                            <i class="fas fa-sync-alt text-[10px] text-slate-300" id="refresh-icon-desktop"></i>
-                        </div>
+                        <button onclick="fetchTasks()" class="flex items-center space-x-2 bg-white/60 backdrop-blur-md px-4 py-2 rounded-full border border-slate-200/50 shadow-sm hover:bg-white hover:text-blue-500 transition-all active:scale-95 group">
+                            <span class="text-xs font-bold text-slate-500 group-hover:text-blue-500">업데이트</span>
+                            <i class="fas fa-sync-alt text-[10px] text-slate-300 group-hover:text-blue-500" id="refresh-icon-desktop"></i>
+                        </button>
                     </div>
                 </div>
             </aside>
@@ -125,10 +125,10 @@
                                 <i class="fas fa-cog text-xl"></i>
                             </a>
                         </div>
-                        <div class="flex items-center space-x-2 bg-white/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-slate-200/50 shadow-sm" onclick="fetchTasks()">
-                            <span id="auto-refresh-timer-mobile" class="text-xs font-mono font-bold text-slate-500">10s</span>
+                        <button onclick="fetchTasks()" class="flex items-center space-x-2 bg-white/60 backdrop-blur-md px-4 py-2 rounded-full border border-slate-200/50 shadow-sm group">
+                            <span class="text-xs font-bold text-slate-500">업데이트</span>
                             <i class="fas fa-sync-alt text-[10px] text-slate-300" id="refresh-icon-mobile"></i>
-                        </div>
+                        </button>
                     </div>
                     <!-- Mobile Chips with No-Wrap and Horizontal Scroll -->
                     <div id="list-container" class="flex flex-row flex-nowrap overflow-x-auto space-x-2 pb-2 no-scrollbar select-none w-full">
@@ -184,30 +184,7 @@
 
     <script>
         let currentListId = null;
-        let refreshSecondsLeft = 10;
         let isProcessing = false;
-
-        setInterval(() => {
-            if (isProcessing) return;
-            if (document.activeElement === document.getElementById('task-input')) {
-                refreshSecondsLeft = 10;
-                updateTimerUI();
-                return;
-            }
-            refreshSecondsLeft--;
-            if (refreshSecondsLeft <= 0) {
-                fetchTasks(true);
-                refreshSecondsLeft = 10;
-            }
-            updateTimerUI();
-        }, 1000);
-
-        function updateTimerUI() {
-            ['mobile', 'desktop'].forEach(view => {
-                const timer = document.getElementById(`auto-refresh-timer-${view}`);
-                if (timer) timer.innerText = refreshSecondsLeft + 's';
-            });
-        }
 
         async function fetchLists() {
             try {
@@ -295,7 +272,6 @@
             finally {
                 loading.classList.add('hidden');
                 icons.forEach(i => i && i.classList.remove('fa-spin'));
-                refreshSecondsLeft = 10;
             }
         }
 
@@ -312,17 +288,30 @@
             const now = new Date();
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
             
-            // 내일 날짜 계산
             const tomorrow = new Date(today);
             tomorrow.setDate(today.getDate() + 1);
             
-            // 이번 주 일요일 날짜 계산
             const endOfWeek = new Date(today);
-            const diff = 7 - (today.getDay() === 0 ? 7 : today.getDay()); // 다음 일요일까지 남은 일수 (일요일을 7로 취급)
+            const diff = 7 - (today.getDay() === 0 ? 7 : today.getDay());
             endOfWeek.setDate(today.getDate() + diff);
             endOfWeek.setHours(23, 59, 59, 999);
 
+            let lastListName = '';
+
             tasks.forEach(task => {
+                // 전체 할 일 보기에서만 리스트 헤더 표시
+                if (currentListId === null && task.list_name !== lastListName) {
+                    const header = document.createElement('div');
+                    header.className = 'pt-6 pb-2 px-1 text-xs font-black text-slate-400 uppercase flex items-center tracking-widest';
+                    header.innerHTML = `
+                        <span class="bg-slate-200 h-px flex-grow mr-4"></span>
+                        <i class="fas fa-layer-group mr-2 opacity-60"></i>${task.list_name}
+                        <span class="bg-slate-200 h-px flex-grow ml-4"></span>
+                    `;
+                    container.appendChild(header);
+                    lastListName = task.list_name;
+                }
+
                 const card = document.createElement('div');
                 card.id = `task-${task.id}`;
                 

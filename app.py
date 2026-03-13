@@ -177,7 +177,12 @@ def get_tasks():
             for task_list_results in results:
                 all_tasks.extend(task_list_results)
         
-        all_tasks.sort(key=lambda x: (x['due_date'] is None, x['due_date']))
+        # 전체 조회 시 리스트 이름별로 그룹화하기 위해 정렬 순서 변경
+        if not list_id:
+            all_tasks.sort(key=lambda x: (x['list_name'], x['due_date'] is None, x['due_date']))
+        else:
+            all_tasks.sort(key=lambda x: (x['due_date'] is None, x['due_date']))
+            
         return jsonify(all_tasks)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
