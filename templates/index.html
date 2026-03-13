@@ -311,15 +311,56 @@
             container.innerHTML = '';
             const now = new Date();
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            
+            // 내일 날짜 계산
+            const tomorrow = new Date(today);
+            tomorrow.setDate(today.getDate() + 1);
+            
+            // 이번 주 일요일 날짜 계산
+            const endOfWeek = new Date(today);
+            const diff = 7 - (today.getDay() === 0 ? 7 : today.getDay()); // 다음 일요일까지 남은 일수 (일요일을 7로 취급)
+            endOfWeek.setDate(today.getDate() + diff);
+            endOfWeek.setHours(23, 59, 59, 999);
 
             tasks.forEach(task => {
                 const card = document.createElement('div');
                 card.id = `task-${task.id}`;
-                card.className = 'group task-card bg-white p-4 rounded-2xl border border-slate-100 flex items-center space-x-4 shadow-sm transition-all';
-                const isUrgent = task.importance === 'high';
                 
+                const isImportant = task.importance === 'high';
                 const dueDate = parseDate(task.due_date);
+                
+                const isToday = dueDate && dueDate.getTime() === today.getTime();
+                const isTomorrow = dueDate && dueDate.getTime() === tomorrow.getTime();
                 const isOverdue = dueDate && dueDate < today;
+                const isThisWeek = dueDate && !isToday && !isTomorrow && !isOverdue && dueDate <= endOfWeek;
+
+                // 테두리 및 배경 색상 결정 로직
+                let borderColor = 'border-slate-100';
+                let bgColor = 'bg-white';
+                let borderSize = 'border';
+                
+                if (isImportant) {
+                    borderColor = 'border-amber-400 shadow-md shadow-amber-50';
+                    bgColor = 'bg-amber-50/30';
+                    borderSize = 'border-[3px]';
+                } else if (isOverdue) {
+                    borderColor = 'border-rose-400 shadow-sm';
+                    bgColor = 'bg-rose-50/20';
+                    borderSize = 'border-2';
+                } else if (isToday) {
+                    borderColor = 'border-emerald-400 shadow-sm';
+                    bgColor = 'bg-emerald-50/20';
+                    borderSize = 'border-2';
+                } else if (isTomorrow) {
+                    borderColor = 'border-blue-400 shadow-sm';
+                    bgColor = 'bg-blue-50/10';
+                    borderSize = 'border-2';
+                } else if (isThisWeek) {
+                    borderColor = 'border-sky-300';
+                    bgColor = 'bg-sky-50/5';
+                }
+
+                card.className = `group task-card ${bgColor} p-4 rounded-2xl ${borderSize} ${borderColor} flex items-center space-x-4 transition-all`;
                 
                 card.innerHTML = `
                     <div class="flex-shrink-0">
@@ -332,11 +373,15 @@
                     <div class="flex-grow min-w-0">
                         <div class="flex items-center space-x-2">
                             <h3 class="text-[15px] font-bold text-slate-700 truncate group-hover:text-blue-900 transition-colors">${task.title}</h3>
-                            ${isUrgent ? '<i class="fas fa-fire text-orange-500 text-xs animate-pulse"></i>' : ''}
+                            ${isImportant ? '<i class="fas fa-star text-amber-500 text-sm"></i>' : ''}
                         </div>
                         <div class="flex items-center text-[11px] mt-1.5 space-x-3 text-slate-400 font-bold uppercase tracking-widest">
                             <span class="flex items-center"><i class="fas fa-folder mr-1.5 opacity-60"></i>${task.list_name}</span>
-                            ${task.due_date ? `<span class="${isOverdue ? 'text-rose-500' : ''}"><i class="far fa-calendar-check mr-1.5 opacity-60"></i>${formatDate(task.due_date)}</span>` : ''}
+                            ${task.due_date ? `
+                                <span class="flex items-center ${isOverdue ? 'text-rose-500' : (isToday ? 'text-emerald-600' : (isTomorrow ? 'text-blue-600' : ''))}">
+                                    <i class="far fa-calendar-check mr-1.5 opacity-60"></i>
+                                    ${formatDate(task.due_date)}
+                                </span>` : ''}
                         </div>
                     </div>
                 `;
