@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title> 할 일 대시보드 | Microsoft To Do</title>
+    <title>할 일 | Microsoft To Do</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
@@ -74,6 +74,18 @@
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
         .sidebar { height: calc(100vh - 4rem); position: sticky; top: 2rem; }
+
+        /* Inline Edit Styling */
+        [contenteditable="true"]:focus {
+            outline: none;
+            background: rgba(241, 245, 249, 0.5);
+            border-radius: 4px;
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+            padding: 0 4px;
+        }
+        
+        /* Star Hover Effect */
+        .star-btn:hover i { transform: scale(1.2); }
     </style>
 </head>
 <body class="p-4 md:p-8">
@@ -92,14 +104,10 @@
                         <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
                             <i class="fas fa-check-double text-white text-sm"></i>
                         </div>
-                        <h1 class="text-2xl font-black text-slate-800 tracking-tight">나의 할 일</h1>
+                        <h1 class="text-2xl font-black text-slate-800 tracking-tight">to-do list</h1>
                     </div>
 
                     <nav class="space-y-1 overflow-y-auto no-scrollbar" id="sidebar-list">
-                        <div onclick="selectList(null)" id="side-chip-all" class="sidebar-item active group flex items-center px-4 py-3 text-slate-600 font-bold hover:bg-white/60 transition-all text-[15px]">
-                            <i class="fas fa-layer-group mr-3 opacity-50"></i>
-                            <span>전체 할 일</span>
-                        </div>
                         <!-- Lists will be injected here -->
                     </nav>
 
@@ -132,9 +140,6 @@
                     </div>
                     <!-- Mobile Chips with No-Wrap and Horizontal Scroll -->
                     <div id="list-container" class="flex flex-row flex-nowrap overflow-x-auto space-x-2 pb-2 no-scrollbar select-none w-full">
-                        <div onclick="selectList(null)" id="chip-all" class="chip active px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-[14px] font-bold shadow-sm">
-                            <i class="fas fa-layer-group mr-2 opacity-50"></i>전체
-                        </div>
                         <!-- Lists injected here -->
                     </div>
                 </header>
@@ -194,16 +199,10 @@
                 const mobileContainer = document.getElementById('list-container');
                 const sidebarContainer = document.getElementById('sidebar-list');
                 
-                const mobileAllChip = document.getElementById('chip-all');
-                const sideAllChip = document.getElementById('side-chip-all');
-                
                 mobileContainer.innerHTML = '';
-                mobileContainer.appendChild(mobileAllChip);
-                
                 sidebarContainer.innerHTML = '';
-                sidebarContainer.appendChild(sideAllChip);
 
-                lists.forEach(list => {
+                lists.forEach((list, index) => {
                     const chip = document.createElement('div');
                     chip.id = `chip-${list.id}`;
                     chip.className = 'chip px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-[14px] font-bold shadow-sm transition-all';
@@ -225,25 +224,32 @@
                     `;
                     item.onclick = () => selectList(list.id);
                     sidebarContainer.appendChild(item);
+
+                    // 첫 번째 리스트를 기본값으로 선택
+                    if (index === 0 && currentListId === null) {
+                        selectList(list.id);
+                    }
                 });
             } catch (err) { console.error('Failed to fetch lists', err); }
         }
 
         function selectList(id) {
+            if (!id) return;
             currentListId = id;
             document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
-            const activeChip = id === null ? document.getElementById('chip-all') : document.getElementById(`chip-${id}`);
+            const activeChip = document.getElementById(`chip-${id}`);
             if (activeChip) {
                 activeChip.classList.add('active');
                 activeChip.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
             }
             document.querySelectorAll('.sidebar-item').forEach(c => c.classList.remove('active'));
-            const activeSide = id === null ? document.getElementById('side-chip-all') : document.getElementById(`side-chip-${id}`);
+            const activeSide = document.getElementById(`side-chip-${id}`);
             if (activeSide) activeSide.classList.add('active');
             fetchTasks();
         }
 
         async function fetchTasks(silent = false) {
+            if (!currentListId) return;
             const loading = document.getElementById('loading');
             const taskList = document.getElementById('task-list');
             const emptyState = document.getElementById('empty-state');
@@ -257,7 +263,7 @@
             icons.forEach(i => i && i.classList.add('fa-spin'));
 
             try {
-                const url = currentListId ? `/api/tasks?list_id=${currentListId}` : '/api/tasks';
+                const url = `/api/tasks?list_id=${currentListId}`;
                 const response = await fetch(url);
                 const tasks = await response.json();
                 if (tasks.length === 0) {
@@ -296,22 +302,7 @@
             endOfWeek.setDate(today.getDate() + diff);
             endOfWeek.setHours(23, 59, 59, 999);
 
-            let lastListName = '';
-
             tasks.forEach(task => {
-                // 전체 할 일 보기에서만 리스트 헤더 표시
-                if (currentListId === null && task.list_name !== lastListName) {
-                    const header = document.createElement('div');
-                    header.className = 'pt-6 pb-2 px-1 text-xs font-black text-slate-400 uppercase flex items-center tracking-widest';
-                    header.innerHTML = `
-                        <span class="bg-slate-200 h-px flex-grow mr-4"></span>
-                        <i class="fas fa-layer-group mr-2 opacity-60"></i>${task.list_name}
-                        <span class="bg-slate-200 h-px flex-grow ml-4"></span>
-                    `;
-                    container.appendChild(header);
-                    lastListName = task.list_name;
-                }
-
                 const card = document.createElement('div');
                 card.id = `task-${task.id}`;
                 
@@ -331,19 +322,19 @@
                 if (isImportant) {
                     borderColor = 'border-amber-400 shadow-md shadow-amber-50';
                     bgColor = 'bg-amber-50/30';
-                    borderSize = 'border-[3px]';
+                    borderSize = 'border-2';
                 } else if (isOverdue) {
                     borderColor = 'border-rose-400 shadow-sm';
                     bgColor = 'bg-rose-50/20';
-                    borderSize = 'border-2';
+                    borderSize = 'border-[1.5px]';
                 } else if (isToday) {
                     borderColor = 'border-emerald-400 shadow-sm';
                     bgColor = 'bg-emerald-50/20';
-                    borderSize = 'border-2';
+                    borderSize = 'border-[1.5px]';
                 } else if (isTomorrow) {
                     borderColor = 'border-blue-400 shadow-sm';
                     bgColor = 'bg-blue-50/10';
-                    borderSize = 'border-2';
+                    borderSize = 'border-[1.5px]';
                 } else if (isThisWeek) {
                     borderColor = 'border-sky-300';
                     bgColor = 'bg-sky-50/5';
@@ -380,8 +371,18 @@
                         </div>
                         <div class="flex-grow min-w-0">
                             <div class="flex items-center space-x-2">
-                                <h3 class="text-[15px] font-bold text-slate-700 truncate group-hover:text-blue-900 transition-colors">${task.title}</h3>
-                                ${isImportant ? '<i class="fas fa-star text-amber-500 text-sm"></i>' : ''}
+                                <h3 class="text-[15px] font-bold text-slate-700 truncate group-hover:text-blue-900 transition-colors outline-none"
+                                    contenteditable="true"
+                                    onblur="updateTaskTitle('${task.list_id}', '${task.id}', this)"
+                                    onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }">
+                                    ${task.title}
+                                </h3>
+                                <button onclick="toggleImportance('${task.list_id}', '${task.id}', '${task.importance}')" 
+                                        class="star-btn ml-1 focus:outline-none transition-all">
+                                    ${isImportant ? 
+                                        '<i class="fas fa-star text-amber-500 text-sm"></i>' : 
+                                        '<i class="far fa-star text-amber-400 text-sm opacity-0 group-hover:opacity-100 transition-opacity"></i>'}
+                                </button>
                             </div>
                             <div class="flex items-center text-[11px] mt-1.5 space-x-3 text-slate-400 font-bold uppercase tracking-widest">
                                 <span class="flex items-center"><i class="fas fa-folder mr-1.5 opacity-60"></i>${task.list_name}</span>
@@ -450,7 +451,7 @@
             let targetListId = currentListId;
             if (!targetListId) {
                 const sidebarItems = document.querySelectorAll('.sidebar-item');
-                if (sidebarItems.length > 1) targetListId = sidebarItems[1].id.replace('side-chip-', '');
+                if (sidebarItems.length > 0) targetListId = sidebarItems[0].id.replace('side-chip-', '');
                 else { alert('목록 정보를 불러오는 중입니다...'); return; }
             }
             isProcessing = true;
@@ -475,7 +476,39 @@
             } catch (err) { card.classList.remove('completed'); card.querySelector('input').checked = false; }
         }
 
-        document.addEventListener('DOMContentLoaded', () => { fetchLists(); fetchTasks(); });
+        async function updateTaskTitle(listId, taskId, element) {
+            const newTitle = element.innerText.trim();
+            if (!newTitle) return;
+            try {
+                const response = await fetch(`/api/tasks/${listId}/${taskId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: newTitle })
+                });
+                if (!response.ok) throw new Error('Update failed');
+            } catch (err) {
+                console.error(err);
+                alert('일정 수정 중 오류가 발생했습니다.');
+            }
+        }
+
+        async function toggleImportance(listId, taskId, currentImportance) {
+            const newImportance = currentImportance === 'high' ? 'normal' : 'high';
+            try {
+                const response = await fetch(`/api/tasks/${listId}/${taskId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ importance: newImportance })
+                });
+                if (response.ok) {
+                    fetchTasks(true);
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => { fetchLists(); });
     </script>
 </body>
 </html>

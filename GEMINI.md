@@ -19,9 +19,10 @@
 
 ## 3. 핵심 아키텍처 및 로직
 - **인증 흐름**: 
-  1. `/auth/login`에서 Microsoft 로그인 페이지로 리다이렉트.
+  1. `/auth/login`에서 `offline_access` 권한을 포함하여 Microsoft 로그인 페이지로 리다이렉트.
   2. `/auth/callback`에서 인증 코드를 받아 토큰으로 교환 후 `config.ini`에 저장.
-- **API 연동**: `ToDoConnection` 클래스를 통해 Microsoft Graph API와 통신합니다.
+  3. **토큰 자동 갱신**: `get_refreshed_token()` 로직을 통해 토큰 만료 전 `refresh_token`을 사용하여 자동으로 `access_token`을 갱신하고 `config.ini`를 업데이트합니다. (매시간 재로그인 필요 없음)
+- **API 연동**: `ToDoConnection` 클래스를 통해 Microsoft Graph API와 통신합니다. 직접 API 호출 시에도 갱신된 토큰을 사용합니다.
 - **데이터 업데이트 방식**: 기존의 자동 리프레시(Timer) 기능을 제거하고, 사용자가 명시적으로 클릭할 수 있는 **수동 '업데이트' 버튼**으로 대체하여 불필요한 API 호출을 줄이고 사용자 제어권을 높였습니다.
 - **서브태스크 지원**: Microsoft To-Do의 체크리스트(checklistItems)를 할 일 카드 내에 표시합니다. Batch API 호출 시 `$expand=checklistItems`를 사용하여 한 번에 데이터를 가져옵니다.
 - **Optimistic UI**: 서브태스크 완료 처리 시, 서버 응답 전 UI를 먼저 변경(취소선 적용 등)하여 즉각적인 피드백을 제공하고, 실패 시에만 원복하는 방식을 취합니다.
@@ -36,12 +37,13 @@
 - **성능 최적화**: `ThreadPoolExecutor`를 사용하여 여러 할 일 목록을 병렬로 가져옵니다.
 
 ## 4. 주요 파일 구조
-- `app.py`: Flask 애플리케이션의 메인 로직 및 API 엔드포인트.
+- `app.py`: Flask 애플리케이션의 메인 로직 및 API 엔드포인트. (토큰 갱신 로직 포함)
 - `templates/`: 사용자 인터페이스(HTML).
-- `config.ini`: 애플리케이션 설정 및 인증 토큰 저장.
+- `config.ini`: 애플리케이션 설정 및 인증 토큰 저장. (보안 주의)
 - `Dockerfile` / `docker-compose.yml`: 컨테이너 빌드 및 실행 설정.
 
 ## 5. 개발 및 운영 지침
-- **인증 오류 발생 시**: `config.ini`의 `client_token`이 유효한지 확인하거나, `/settings` 페이지에서 ID/Secret 설정을 점검하십시오.
+- **인증 오류 발생 시**: `config.ini`의 `client_token` 내 `expires_at`이 현재 시간보다 이전인지 확인하거나, `refresh_token`의 유효성을 점검하십시오. 필요한 경우 다시 로그인(`auth_login`)이 필요할 수 있습니다.
 - **날짜 표시**: 백엔드에서 `kst_dt = dt + timedelta(hours=9)` 로직을 통해 보정된 날짜를 사용합니다.
 - **Proxy 대응**: `werkzeug.middleware.proxy_fix.ProxyFix`를 적용하여 리버스 프록시 환경에서도 리다이렉트 URI가 올바르게 생성되도록 합니다.
+- **보안**: `SECRET_KEY`는 가급적 환경 변수를 통해 설정하여 세션 보안을 강화하십시오.
