@@ -190,6 +190,7 @@
     <script>
         let currentListId = null;
         let isProcessing = false;
+        let cachedTasks = [];
 
         async function fetchLists() {
             try {
@@ -265,12 +266,12 @@
             try {
                 const url = `/api/tasks?list_id=${currentListId}`;
                 const response = await fetch(url);
-                const tasks = await response.json();
-                if (tasks.length === 0) {
+                cachedTasks = await response.json();
+                if (cachedTasks.length === 0) {
                     taskList.classList.add('hidden');
                     emptyState.classList.remove('hidden');
                 } else {
-                    renderTasks(tasks);
+                    sortAndRenderTasks();
                     taskList.classList.remove('hidden');
                     emptyState.classList.add('hidden');
                 }
@@ -279,6 +280,25 @@
                 loading.classList.add('hidden');
                 icons.forEach(i => i && i.classList.remove('fa-spin'));
             }
+        }
+
+        function sortAndRenderTasks() {
+            // 중요도(high 우선), 마감일 순으로 정렬
+            cachedTasks.sort((a, b) => {
+                // 1. 중요도 (high가 0, normal이 1로 평가되도록)
+                const aImp = a.importance === 'high' ? 0 : 1;
+                const bImp = b.importance === 'high' ? 0 : 1;
+                if (aImp !== bImp) return aImp - bImp;
+
+                // 2. 마감일 (null은 뒤로)
+                if (a.due_date && !b.due_date) return -1;
+                if (!a.due_date && b.due_date) return 1;
+                if (a.due_date && b.due_date) {
+                    return a.due_date.localeCompare(b.due_date);
+                }
+                return 0;
+            });
+            renderTasks(cachedTasks);
         }
 
         function parseDate(dateStr) {
@@ -371,7 +391,7 @@
                         </div>
                         <div class="flex-grow min-w-0">
                             <div class="flex items-center space-x-2">
-                                <h3 class="text-[15px] font-bold text-slate-700 truncate group-hover:text-blue-900 transition-colors outline-none"
+                                <h3 class="text-[15px] font-bold text-slate-700 group-hover:text-blue-900 transition-colors outline-none"
                                     contenteditable="true"
                                     onblur="updateTaskTitle('${task.list_id}', '${task.id}', this)"
                                     onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }">
@@ -494,17 +514,29 @@
 
         async function toggleImportance(listId, taskId, currentImportance) {
             const newImportance = currentImportance === 'high' ? 'normal' : 'high';
+            
+            // Optimistic UI: 로컬 데이터 즉시 업데이트 및 재정렬
+            const taskIndex = cachedTasks.findIndex(t => t.id === taskId);
+            if (taskIndex !== -1) {
+                cachedTasks[taskIndex].importance = newImportance;
+                sortAndRenderTasks();
+            }
+
             try {
                 const response = await fetch(`/api/tasks/${listId}/${taskId}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ importance: newImportance })
                 });
-                if (response.ok) {
-                    fetchTasks(true);
-                }
+                if (!response.ok) throw new Error('Update failed');
             } catch (err) {
                 console.error(err);
+                // 실패 시 원복
+                if (taskIndex !== -1) {
+                    cachedTasks[taskIndex].importance = currentImportance;
+                    sortAndRenderTasks();
+                }
+                alert('중요도 변경 중 오류가 발생했습니다.');
             }
         }
 

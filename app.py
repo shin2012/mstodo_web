@@ -284,9 +284,9 @@ def get_tasks():
                             })
         
         if not list_id_param:
-            all_tasks.sort(key=lambda x: (x['list_name'], x['due_date'] is None, x['due_date']))
+            all_tasks.sort(key=lambda x: (x['importance'] != 'high', x['list_name'], x['due_date'] is None, x['due_date']))
         else:
-            all_tasks.sort(key=lambda x: (x['due_date'] is None, x['due_date']))
+            all_tasks.sort(key=lambda x: (x['importance'] != 'high', x['due_date'] is None, x['due_date']))
             
         return jsonify(all_tasks)
     except Exception as e:
