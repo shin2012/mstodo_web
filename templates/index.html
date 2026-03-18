@@ -149,9 +149,17 @@
                         <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform">
                             <i class="fas fa-check-double text-white text-sm"></i>
                         </div>
-                        <div class="flex flex-col">
+                        <div class="flex flex-col flex-grow">
                             <h1 class="text-2xl font-black text-slate-800 tracking-tight leading-none">to-do list</h1>
                             <span id="desktop-clock" class="text-[10px] font-bold text-slate-400 mt-1 tracking-wider"></span>
+                        </div>
+                        <div class="character-face w-8 h-8 bg-yellow-400 rounded-full flex justify-center items-center gap-1 shadow-sm relative ml-2 group-hover:scale-110 transition-transform">
+                            <div class="eye w-2 h-2.5 bg-white rounded-full relative overflow-hidden">
+                                <div class="pupil w-1 h-1 bg-slate-800 rounded-full absolute top-[40%] left-[40%]"></div>
+                            </div>
+                            <div class="eye w-2 h-2.5 bg-white rounded-full relative overflow-hidden">
+                                <div class="pupil w-1 h-1 bg-slate-800 rounded-full absolute top-[40%] left-[40%]"></div>
+                            </div>
                         </div>
                     </a>
 
@@ -197,13 +205,21 @@
                 <header class="mb-4">
                     <div class="flex justify-between items-center mb-4">
                         <div class="flex items-center space-x-3">
-                            <a href="javascript:void(0)" onclick="selectList(null)" class="flex items-center space-x-2">
-                                <div class="w-6 h-6 bg-blue-500 rounded flex items-center justify-center">
+                            <a href="javascript:void(0)" onclick="selectList(null)" class="flex items-center space-x-2 group">
+                                <div class="w-6 h-6 bg-blue-500 rounded flex items-center justify-center group-hover:scale-110 transition-transform">
                                     <i class="fas fa-check-double text-white text-[10px]"></i>
                                 </div>
                                 <div class="flex flex-col">
                                     <h1 class="text-2xl font-black text-slate-800 tracking-tight leading-none">to-do</h1>
                                     <span id="mobile-clock" class="text-[9px] font-bold text-slate-400 mt-0.5 tracking-wider"></span>
+                                </div>
+                                <div class="character-face w-6 h-6 bg-yellow-400 rounded-full flex justify-center items-center gap-0.5 shadow-sm relative ml-1 group-hover:scale-110 transition-transform">
+                                    <div class="eye w-1.5 h-2 bg-white rounded-full relative overflow-hidden">
+                                        <div class="pupil w-[3px] h-[3px] bg-slate-800 rounded-full absolute top-[40%] left-[40%]"></div>
+                                    </div>
+                                    <div class="eye w-1.5 h-2 bg-white rounded-full relative overflow-hidden">
+                                        <div class="pupil w-[3px] h-[3px] bg-slate-800 rounded-full absolute top-[40%] left-[40%]"></div>
+                                    </div>
                                 </div>
                             </a>
                             <a href="/settings" class="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-white hover:text-blue-600 transition-all" title="설정">
@@ -1020,12 +1036,37 @@
                 .catch(err => console.error('Failed to fetch sun times', err));
         }
 
-        document.addEventListener('DOMContentLoaded', () => { 
-            fetchLists(); 
+        function initEyeTracking() {
+            document.addEventListener('mousemove', (e) => {
+                const mouseX = e.clientX;
+                const mouseY = e.clientY;
+
+                const eyes = document.querySelectorAll('.eye');
+                eyes.forEach(eye => {
+                    const rect = eye.getBoundingClientRect();
+                    const eyeX = rect.left + rect.width / 2;
+                    const eyeY = rect.top + rect.height / 2;
+
+                    const angle = Math.atan2(mouseY - eyeY, mouseX - eyeX);
+                    const distance = Math.min(rect.width / 4, rect.height / 4); // max distance pupil can move
+
+                    const pupilX = Math.cos(angle) * distance;
+                    const pupilY = Math.sin(angle) * distance;
+
+                    const pupil = eye.querySelector('.pupil');
+                    if (pupil) {
+                        pupil.style.transform = `translate(calc(-50% + ${pupilX}px), calc(-50% + ${pupilY}px))`;
+                    }
+                });
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchLists();
             initClock();
             initBackgroundBySun();
+            initEyeTracking();
             setInterval(initBackgroundBySun, 10 * 60 * 1000);
-        });
-    </script>
+        });    </script>
 </body>
 </html>
