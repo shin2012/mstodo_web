@@ -796,9 +796,9 @@
                             
                             <div class="flex-shrink-0 ml-4 flex items-center">
                                 ${(!currentListId || currentListId.startsWith('group_')) && task.list_name ? `
-                                    <span class="mr-2 px-1.5 py-0.5 bg-slate-100/80 text-slate-500 text-[10px] font-bold rounded flex items-center max-w-[80px] truncate" title="${task.list_name}">
+                                    <span class="mr-2 px-1.5 py-0.5 bg-slate-100/80 text-slate-500 text-[10px] font-bold rounded flex items-center whitespace-nowrap" title="${task.list_name}">
                                         <i class="fas fa-list-ul mr-1 text-[8px] opacity-60"></i>
-                                        <span class="truncate">${task.list_name}</span>
+                                        <span>${task.list_name}</span>
                                     </span>
                                 ` : ''}
                                 ${task.due_date ? `
