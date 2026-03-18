@@ -214,7 +214,7 @@
                                     <i class="fas fa-check-double text-white text-[10px]"></i>
                                 </div>
                                 <div class="flex flex-col">
-                                    <h1 class="text-2xl font-black text-slate-800 tracking-tight leading-none">to-do</h1>
+                                    <h1 class="text-2xl font-black text-slate-800 tracking-tight leading-none">to-do list</h1>
                                     <span id="mobile-clock" class="text-[9px] font-bold text-slate-400 mt-0.5 tracking-wider"></span>
                                 </div>
                                 <div class="character-face w-6 h-6 bg-yellow-400 rounded-full flex flex-col justify-center items-center shadow-sm relative ml-1 group-hover:scale-110 transition-transform">
@@ -294,9 +294,7 @@
         let isProcessing = false;
         let cachedTasks = [];
         let allLists = [];
-        let userGroups = []; 
-        let ungroupedCollapsed = false;
-
+        let userGroups = [];
         async function fetchLists() {
             try {
                 const [listsResp, groupsResp] = await Promise.all([
@@ -306,8 +304,24 @@
                 allLists = await listsResp.json();
                 const groupsData = await groupsResp.json();
                 userGroups = groupsData.groups || [];
-                ungroupedCollapsed = groupsData.ungroupedCollapsed || false;
                 
+                // Process ungrouped lists: auto-group them into '기타 목록'
+                const groupedListIds = new Set(userGroups.flatMap(g => g.lists));
+                const ungroupedListIds = allLists.map(l => l.id).filter(id => !groupedListIds.has(id));
+                
+                if (ungroupedListIds.length > 0) {
+                    let otherGroup = userGroups.find(g => g.name === '기타 목록');
+                    if (!otherGroup) {
+                        otherGroup = { name: '기타 목록', lists: [], collapsed: false };
+                        userGroups.push(otherGroup);
+                    }
+                    const existingInOther = new Set(otherGroup.lists);
+                    ungroupedListIds.forEach(id => {
+                        if (!existingInOther.has(id)) otherGroup.lists.push(id);
+                    });
+                    await saveGroups();
+                }
+
                 renderSidebar();
                 renderMobileChips();
 
@@ -329,25 +343,27 @@
                 groupEl.className = `mb-2 ${group.collapsed ? 'collapsed' : ''}`;
                 
                 const header = document.createElement('div');
-                header.className = 'group-header flex items-center justify-between px-3 py-2 text-slate-400 hover:text-slate-600 transition-colors group';
+                header.id = `side-chip-group_${groupIdx}`;
+                header.className = `sidebar-item group-header group flex items-center justify-between px-4 py-2.5 text-slate-500 font-bold hover:bg-white/60 transition-all text-[14px] ${currentListId === 'group_' + groupIdx ? 'active' : ''}`;
+                header.style.cursor = 'pointer';
                 header.onclick = (e) => {
-                    if (e.target.closest('.delete-group-btn') || e.target.closest('.group-name') || e.target.closest('.view-group-btn')) return;
-                    toggleGroup(groupIdx);
+                    if (e.target.closest('.action-btn') || e.target.isContentEditable) return;
+                    selectList(`group_${groupIdx}`);
                 };
                 header.innerHTML = `
-                    <div class="flex items-center space-x-2 flex-grow min-w-0">
-                        <i class="fas fa-chevron-down text-[10px] rotate-icon flex-shrink-0"></i>
-                        <span class="group-name text-[11px] font-black uppercase tracking-widest outline-none truncate" 
-                              contenteditable="true" 
-                              onblur="renameGroup(${groupIdx}, this)"
+                    <div class="flex items-center space-x-3 flex-grow min-w-0">
+                        <div class="action-btn cursor-pointer flex items-center justify-center w-5 h-5 opacity-40 hover:opacity-100 flex-shrink-0 group-[.active]:opacity-100" onclick="toggleGroup(${groupIdx}); event.stopPropagation();">
+                            <i class="fas fa-chevron-down text-sm rotate-icon flex-shrink-0 ${group.collapsed ? 'collapsed' : ''}"></i>
+                        </div>
+                        <span class="group-name text-[14px] truncate outline-none" 
                               onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }">${group.name}</span>
                     </div>
                     <div class="flex items-center space-x-1 flex-shrink-0">
-                        <button onclick="selectList('group_${groupIdx}')" class="view-group-btn opacity-0 group-hover:opacity-100 hover:text-blue-500 transition-all p-1" title="그룹 할 일 보기">
-                            <i class="fas fa-list-ul text-[10px]"></i>
+                        <button onclick="editGroup(${groupIdx}, this); event.stopPropagation();" class="action-btn opacity-0 group-hover:opacity-100 hover:text-blue-500 transition-all p-1" title="이름 수정">
+                            <i class="fas fa-edit text-[14px]"></i>
                         </button>
-                        <button onclick="deleteGroup(${groupIdx})" class="delete-group-btn opacity-0 group-hover:opacity-100 hover:text-rose-500 transition-all p-1" title="그룹 삭제">
-                            <i class="fas fa-times text-[10px]"></i>
+                        <button onclick="deleteGroup(${groupIdx}); event.stopPropagation();" class="action-btn opacity-0 group-hover:opacity-100 hover:text-rose-500 transition-all p-1" title="그룹 삭제">
+                            <i class="fas fa-times text-[14px]"></i>
                         </button>
                     </div>
                 `;
@@ -370,40 +386,51 @@
                 initSortable(content, groupIdx);
             });
 
-            // Ungrouped Lists (Other Lists)
-            const ungroupedEl = document.createElement('div');
-            ungroupedEl.className = `mb-2 ${ungroupedCollapsed ? 'collapsed' : ''}`;
-
-            const ungroupedHeader = document.createElement('div');
-            ungroupedHeader.className = 'group-header flex items-center px-3 py-2 text-slate-400 hover:text-slate-600 transition-colors mt-4';
-            ungroupedHeader.onclick = () => toggleUngrouped();
-            ungroupedHeader.innerHTML = `
-                <div class="flex items-center space-x-2">
-                    <i class="fas fa-chevron-down text-[10px] rotate-icon"></i>
-                    <span class="text-[11px] font-black uppercase tracking-widest">기타 목록</span>
-                </div>
-            `;
-            ungroupedEl.appendChild(ungroupedHeader);
-
-            const ungroupedContent = document.createElement('div');
-            ungroupedContent.className = `group-content space-y-0.5 mt-1 ${ungroupedCollapsed ? 'collapsed' : ''}`;
-            ungroupedContent.dataset.groupIdx = 'ungrouped';
-            
-            const groupedListIds = userGroups.flatMap(g => g.lists);
-            allLists.forEach(list => {
-                if (!groupedListIds.includes(list.id)) {
-                    ungroupedContent.appendChild(createSidebarItem(list));
+            // Initialize Group Reordering Sortable
+            new Sortable(container, {
+                animation: 150,
+                handle: '.group-header',
+                ghostClass: 'bg-slate-50',
+                onEnd: async (evt) => {
+                    const sidebar = document.getElementById('sidebar-list');
+                    const groupContents = sidebar.querySelectorAll('.group-content');
+                    
+                    let updatedGroups = [];
+                    groupContents.forEach(content => {
+                        const idx = content.dataset.groupIdx;
+                        const listIds = Array.from(content.children).map(c => c.dataset.listId);
+                        
+                        updatedGroups.push({
+                            name: userGroups[idx].name,
+                            collapsed: userGroups[idx].collapsed,
+                            lists: listIds
+                        });
+                    });
+                    
+                    userGroups = updatedGroups;
+                    await saveGroups();
+                    renderSidebar();
                 }
             });
-            ungroupedEl.appendChild(ungroupedContent);
-            container.appendChild(ungroupedEl);
-            initSortable(ungroupedContent, 'ungrouped');
         }
 
-        async function toggleUngrouped() {
-            ungroupedCollapsed = !ungroupedCollapsed;
-            await saveGroups();
-            renderSidebar();
+        async function editGroup(idx, btn) {
+            const header = btn.closest('.group-header');
+            const nameSpan = header.querySelector('.group-name');
+            nameSpan.contentEditable = true;
+            nameSpan.focus();
+            
+            const range = document.createRange();
+            range.selectNodeContents(nameSpan);
+            range.collapse(false);
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(range);
+            
+            nameSpan.onblur = async () => {
+                nameSpan.contentEditable = false;
+                await renameGroup(idx, nameSpan);
+            };
         }
 
         async function renameGroup(idx, el) {
@@ -451,13 +478,6 @@
                 animation: 150,
                 ghostClass: 'bg-blue-50',
                 onEnd: async (evt) => {
-                    const fromIdx = evt.from.dataset.groupIdx;
-                    const toIdx = evt.to.dataset.groupIdx;
-                    
-                    // Update state based on DOM structure
-                    const newGroups = JSON.parse(JSON.stringify(userGroups));
-                    
-                    // This is a simple way: rebuild all groups based on current DOM
                     const sidebar = document.getElementById('sidebar-list');
                     const groupContents = sidebar.querySelectorAll('.group-content');
                     
@@ -466,15 +486,11 @@
                         const idx = content.dataset.groupIdx;
                         const listIds = Array.from(content.children).map(c => c.dataset.listId);
                         
-                        if (idx === 'ungrouped') {
-                            // Don't need to save ungrouped lists in groups file, they are inferred
-                        } else {
-                            updatedGroups.push({
-                                name: userGroups[idx].name,
-                                collapsed: userGroups[idx].collapsed,
-                                lists: listIds
-                            });
-                        }
+                        updatedGroups.push({
+                            name: userGroups[idx].name,
+                            collapsed: userGroups[idx].collapsed,
+                            lists: listIds
+                        });
                     });
                     
                     userGroups = updatedGroups;
@@ -526,8 +542,7 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    groups: userGroups,
-                    ungroupedCollapsed: ungroupedCollapsed
+                    groups: userGroups
                 })
             });
         }
