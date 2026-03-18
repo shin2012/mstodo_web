@@ -198,6 +198,7 @@ def get_tasks():
             if task['list_id'] not in active_lists:
                 continue # Skip tasks whose lists are deleted
             task['list_name'] = active_lists[task['list_id']]
+            task['subtasks'] = task.get('checklistItems', [])
             formatted_tasks.append(task)
             
         if not list_id_param:
