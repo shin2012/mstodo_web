@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>할 일 | Microsoft To Do</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <style>
         body { 
             font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
@@ -17,49 +19,51 @@
             -webkit-font-smoothing: antialiased;
         }
         
-        /* Subtle Animated Background */
+        /* Enhanced Animated Background */
         .bg-animate {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             z-index: -1;
-            background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+            background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
             overflow: hidden;
         }
         .blob {
             position: absolute;
             width: 800px; height: 800px;
-            background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, rgba(59, 130, 246, 0) 70%);
+            background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0) 70%);
             border-radius: 50%;
-            filter: blur(80px);
-            animation: move 20s infinite alternate ease-in-out;
+            filter: blur(60px);
+            animation: move 15s infinite alternate ease-in-out;
         }
         .blob-2 {
-            width: 600px; height: 600px;
-            background: radial-gradient(circle, rgba(99, 102, 241, 0.06) 0%, rgba(99, 102, 241, 0) 70%);
-            top: 15%; right: -10%;
-            animation-duration: 25s; animation-delay: -5s;
+            width: 700px; height: 700px;
+            background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, rgba(99, 102, 241, 0) 70%);
+            top: 10%; right: -5%;
+            animation-duration: 20s; animation-delay: -5s;
         }
         .blob-3 {
-            width: 900px; height: 900px;
-            background: radial-gradient(circle, rgba(147, 197, 253, 0.08) 0%, rgba(147, 197, 253, 0) 70%);
-            bottom: -15%; left: 5%;
-            animation-duration: 30s; animation-delay: -10s;
+            width: 1000px; height: 1000px;
+            background: radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, rgba(37, 99, 235, 0) 70%);
+            bottom: -10%; left: -5%;
+            animation-duration: 25s; animation-delay: -10s;
         }
         @keyframes move {
-            0% { transform: translate(-5%, -5%) rotate(0deg); }
-            100% { transform: translate(10%, 10%) rotate(180deg); }
+            0% { transform: translate(-10%, -10%) rotate(0deg) scale(1); }
+            100% { transform: translate(15%, 15%) rotate(90deg) scale(1.1); }
         }
 
-        /* Initial Spacious Layout */
+        /* Compact Layout */
         .task-card { 
             transition: all 0.2s ease; 
-            background: rgba(255, 255, 255, 0.95);
+            background: rgba(255, 255, 255, 0.98);
             border: 1px solid #f1f5f9;
+            padding-top: 0.75rem !important;
+            padding-bottom: 0.75rem !important;
         }
         .task-card:hover { 
-            transform: translateY(-1.5px); 
-            box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.04); 
-            border-color: #e2e8f0;
+            transform: translateY(-1px); 
+            box-shadow: 0 4px 12px -2px rgb(0 0 0 / 0.05); 
+            border-color: #cbd5e1;
         }
         .completed { text-decoration: line-through; color: #94a3b8; opacity: 0.6; }
         .fade-out { opacity: 0; transform: translateX(20px); transition: all 0.4s ease; }
@@ -67,8 +71,16 @@
         .chip { transition: all 0.2s; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
         .chip.active { background-color: #3b82f6 !important; color: white !important; border-color: #3b82f6 !important; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2); }
         
-        .sidebar-item { transition: all 0.2s; cursor: pointer; border-radius: 0.75rem; white-space: nowrap; }
-        .sidebar-item.active { background-color: #3b82f6 !important; color: white !important; box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2); }
+        .sidebar-item { transition: all 0.2s; cursor: pointer; border-radius: 0.5rem; white-space: nowrap; margin-bottom: 2px; }
+        .sidebar-item.active { background-color: #3b82f6 !important; color: white !important; box-shadow: 0 4px 8px rgba(59, 130, 246, 0.15); }
+        .sidebar-item:hover:not(.active) { background-color: #f1f5f9; }
+
+        /* List Groups */
+        .group-header { cursor: pointer; user-select: none; }
+        .group-content { transition: max-height 0.3s ease-out; overflow: hidden; }
+        .group-content.collapsed { max-height: 0 !important; }
+        .rotate-icon { transition: transform 0.2s; }
+        .collapsed .rotate-icon { transform: rotate(-90deg); }
 
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -78,16 +90,49 @@
         /* Inline Edit Styling */
         [contenteditable="true"]:focus {
             outline: none;
-            background: rgba(241, 245, 249, 0.5);
+            background: rgba(241, 245, 249, 0.8);
             border-radius: 4px;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
             padding: 0 4px;
         }
         
-        /* Star Hover Effect */
         .star-btn:hover i { transform: scale(1.2); }
-    </style>
-</head>
+
+        /* Due Date Button */
+        .due-date-btn { opacity: 0; transition: opacity 0.2s; }
+        .task-card:hover .due-date-btn { opacity: 1; }
+
+        /* Date Picker Popup */
+        #date-picker-popup {
+            position: absolute;
+            z-index: 50;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            padding: 12px;
+            width: 180px;
+        }
+        </style>
+        </head>
+        <body class="p-4 md:p-8">
+        <div id="date-picker-popup" class="hidden">
+        <div class="relative mb-2">
+            <input type="text" id="date-input-field" 
+                   class="w-full p-2 pr-10 border rounded text-sm outline-none focus:ring-2 focus:ring-blue-500/20 font-bold text-slate-700"
+                   readonly onclick="document.getElementById('hidden-date-picker').showPicker()">
+            <div class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                <i class="far fa-calendar-alt"></i>
+            </div>
+            <input type="date" id="hidden-date-picker" class="absolute opacity-0 pointer-events-none" 
+                   onchange="handleHiddenDateChange(this.value)">
+        </div>
+        <div class="flex flex-col space-y-1">
+            <button onclick="applyDueDate()" class="bg-blue-500 text-white text-[11px] font-bold py-1.5 rounded hover:bg-blue-600 transition-all">적용</button>
+            <button onclick="clearDueDate()" class="bg-rose-50 text-rose-500 text-[11px] font-bold py-1.5 rounded hover:bg-rose-100 transition-all border border-rose-100">기한 삭제</button>
+            <button onclick="closeDatePicker()" class="text-slate-400 text-[11px] font-bold py-1 rounded hover:bg-slate-50 transition-all">취소</button>
+        </div>
+        </div>
 <body class="p-4 md:p-8">
     <div class="bg-animate">
         <div class="blob"></div>
@@ -107,8 +152,15 @@
                         <h1 class="text-2xl font-black text-slate-800 tracking-tight">to-do list</h1>
                     </div>
 
-                    <nav class="space-y-1 overflow-y-auto no-scrollbar" id="sidebar-list">
-                        <!-- Lists will be injected here -->
+                    <div class="px-2 mb-4">
+                        <button onclick="addGroup()" class="w-full flex items-center justify-center space-x-2 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition-all">
+                            <i class="fas fa-folder-plus text-[10px] opacity-60"></i>
+                            <span>그룹 추가</span>
+                        </button>
+                    </div>
+
+                    <nav class="space-y-1 overflow-y-auto no-scrollbar flex-grow" id="sidebar-list">
+                        <!-- Groups and Lists will be injected here -->
                     </nav>
 
                     <div class="mt-auto pt-6 px-2 flex items-center justify-between">
@@ -191,47 +243,275 @@
         let currentListId = null;
         let isProcessing = false;
         let cachedTasks = [];
+        let allLists = [];
+        let userGroups = []; 
+        let ungroupedCollapsed = false;
 
         async function fetchLists() {
             try {
-                const response = await fetch('/api/lists');
-                const lists = await response.json();
+                const [listsResp, groupsResp] = await Promise.all([
+                    fetch('/api/lists'),
+                    fetch('/api/groups')
+                ]);
+                allLists = await listsResp.json();
+                const groupsData = await groupsResp.json();
+                userGroups = groupsData.groups || [];
+                ungroupedCollapsed = groupsData.ungroupedCollapsed || false;
                 
-                const mobileContainer = document.getElementById('list-container');
-                const sidebarContainer = document.getElementById('sidebar-list');
+                renderSidebar();
+                renderMobileChips();
+
+                if (allLists.length > 0 && currentListId === null) {
+                    selectList(allLists[0].id);
+                }
+            } catch (err) { console.error('Failed to fetch lists or groups', err); }
+        }
+
+        function renderSidebar() {
+            const container = document.getElementById('sidebar-list');
+            container.innerHTML = '';
+
+            // Grouped Lists
+            userGroups.forEach((group, groupIdx) => {
+                const groupEl = document.createElement('div');
+                groupEl.className = `mb-2 ${group.collapsed ? 'collapsed' : ''}`;
                 
-                mobileContainer.innerHTML = '';
-                sidebarContainer.innerHTML = '';
+                const header = document.createElement('div');
+                header.className = 'group-header flex items-center justify-between px-3 py-2 text-slate-400 hover:text-slate-600 transition-colors group';
+                header.onclick = (e) => {
+                    if (e.target.closest('.delete-group-btn') || e.target.closest('.group-name')) return;
+                    toggleGroup(groupIdx);
+                };
+                header.innerHTML = `
+                    <div class="flex items-center space-x-2">
+                        <i class="fas fa-chevron-down text-[10px] rotate-icon"></i>
+                        <span class="group-name text-[11px] font-black uppercase tracking-widest outline-none" 
+                              contenteditable="true" 
+                              onblur="renameGroup(${groupIdx}, this)"
+                              onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }">${group.name}</span>
+                    </div>
+                    <button onclick="deleteGroup(${groupIdx})" class="delete-group-btn opacity-0 group-hover:opacity-100 hover:text-rose-500 transition-all p-1">
+                        <i class="fas fa-times text-[10px]"></i>
+                    </button>
+                `;
 
-                lists.forEach((list, index) => {
-                    const chip = document.createElement('div');
-                    chip.id = `chip-${list.id}`;
-                    chip.className = 'chip px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-[14px] font-bold shadow-sm transition-all';
-                    chip.innerHTML = `<i class="fas fa-list-ul mr-2 opacity-40"></i>${list.name}`;
-                    chip.onclick = () => selectList(list.id);
-                    mobileContainer.appendChild(chip);
+                const content = document.createElement('div');
+                content.className = `group-content space-y-0.5 mt-1 ${group.collapsed ? 'collapsed' : ''}`;
+                content.dataset.groupIdx = groupIdx;
 
-                    const item = document.createElement('div');
-                    item.id = `side-chip-${list.id}`;
-                    item.className = 'sidebar-item group flex items-center px-4 py-3 text-slate-500 font-bold hover:bg-white/60 transition-all text-[15px]';
-                    
-                    let icon = 'fa-list-ul';
-                    if (list.wellKnownName === 'defaultList') icon = 'fa-inbox';
-                    else if (list.wellKnownName === 'flaggedEmails') icon = 'fa-envelope';
-                    
-                    item.innerHTML = `
-                        <i class="fas ${icon} mr-3 opacity-40 group-[.active]:opacity-100"></i>
-                        <span class="truncate">${list.name}</span>
-                    `;
-                    item.onclick = () => selectList(list.id);
-                    sidebarContainer.appendChild(item);
-
-                    // 첫 번째 리스트를 기본값으로 선택
-                    if (index === 0 && currentListId === null) {
-                        selectList(list.id);
+                group.lists.forEach(listId => {
+                    const list = allLists.find(l => l.id === listId);
+                    if (list) {
+                        content.appendChild(createSidebarItem(list));
                     }
                 });
-            } catch (err) { console.error('Failed to fetch lists', err); }
+
+                groupEl.appendChild(header);
+                groupEl.appendChild(content);
+                container.appendChild(groupEl);
+
+                initSortable(content, groupIdx);
+            });
+
+            // Ungrouped Lists (Other Lists)
+            const ungroupedEl = document.createElement('div');
+            ungroupedEl.className = `mb-2 ${ungroupedCollapsed ? 'collapsed' : ''}`;
+
+            const ungroupedHeader = document.createElement('div');
+            ungroupedHeader.className = 'group-header flex items-center px-3 py-2 text-slate-400 hover:text-slate-600 transition-colors mt-4';
+            ungroupedHeader.onclick = () => toggleUngrouped();
+            ungroupedHeader.innerHTML = `
+                <div class="flex items-center space-x-2">
+                    <i class="fas fa-chevron-down text-[10px] rotate-icon"></i>
+                    <span class="text-[11px] font-black uppercase tracking-widest">기타 목록</span>
+                </div>
+            `;
+            ungroupedEl.appendChild(ungroupedHeader);
+
+            const ungroupedContent = document.createElement('div');
+            ungroupedContent.className = `group-content space-y-0.5 mt-1 ${ungroupedCollapsed ? 'collapsed' : ''}`;
+            ungroupedContent.dataset.groupIdx = 'ungrouped';
+            
+            const groupedListIds = userGroups.flatMap(g => g.lists);
+            allLists.forEach(list => {
+                if (!groupedListIds.includes(list.id)) {
+                    ungroupedContent.appendChild(createSidebarItem(list));
+                }
+            });
+            ungroupedEl.appendChild(ungroupedContent);
+            container.appendChild(ungroupedEl);
+            initSortable(ungroupedContent, 'ungrouped');
+        }
+
+        async function toggleUngrouped() {
+            ungroupedCollapsed = !ungroupedCollapsed;
+            await saveGroups();
+            renderSidebar();
+        }
+
+        async function renameGroup(idx, el) {
+            const newName = el.innerText.trim();
+            if (newName && newName !== userGroups[idx].name) {
+                userGroups[idx].name = newName;
+                await saveGroups();
+            }
+        }
+
+        function createSidebarItem(list) {
+            const item = document.createElement('div');
+            item.id = `side-chip-${list.id}`;
+            item.dataset.listId = list.id;
+            item.className = `sidebar-item group flex items-center px-4 py-2.5 text-slate-500 font-bold hover:bg-white/60 transition-all text-[14px] ${currentListId === list.id ? 'active' : ''}`;
+            
+            let icon = 'fa-list-ul';
+            if (list.wellKnownName === 'defaultList') icon = 'fa-inbox';
+            else if (list.wellKnownName === 'flaggedEmails') icon = 'fa-envelope';
+            
+            item.innerHTML = `
+                <i class="fas ${icon} mr-3 opacity-40 group-[.active]:opacity-100 text-sm"></i>
+                <span class="truncate">${list.name}</span>
+            `;
+            item.onclick = () => selectList(list.id);
+            return item;
+        }
+
+        function renderMobileChips() {
+            const mobileContainer = document.getElementById('list-container');
+            mobileContainer.innerHTML = '';
+            allLists.forEach(list => {
+                const chip = document.createElement('div');
+                chip.id = `chip-${list.id}`;
+                chip.className = `chip px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-[13px] font-bold shadow-sm transition-all ${currentListId === list.id ? 'active' : ''}`;
+                chip.innerHTML = `${list.name}`;
+                chip.onclick = () => selectList(list.id);
+                mobileContainer.appendChild(chip);
+            });
+        }
+
+        function initSortable(el, groupIdx) {
+            new Sortable(el, {
+                group: 'lists',
+                animation: 150,
+                ghostClass: 'bg-blue-50',
+                onEnd: async (evt) => {
+                    const fromIdx = evt.from.dataset.groupIdx;
+                    const toIdx = evt.to.dataset.groupIdx;
+                    
+                    // Update state based on DOM structure
+                    const newGroups = JSON.parse(JSON.stringify(userGroups));
+                    
+                    // This is a simple way: rebuild all groups based on current DOM
+                    const sidebar = document.getElementById('sidebar-list');
+                    const groupContents = sidebar.querySelectorAll('.group-content');
+                    
+                    let updatedGroups = [];
+                    groupContents.forEach(content => {
+                        const idx = content.dataset.groupIdx;
+                        const listIds = Array.from(content.children).map(c => c.dataset.listId);
+                        
+                        if (idx === 'ungrouped') {
+                            // Don't need to save ungrouped lists in groups file, they are inferred
+                        } else {
+                            updatedGroups.push({
+                                name: userGroups[idx].name,
+                                collapsed: userGroups[idx].collapsed,
+                                lists: listIds
+                            });
+                        }
+                    });
+                    
+                    userGroups = updatedGroups;
+                    await saveGroups();
+                    renderSidebar();
+                }
+            });
+        }
+
+        async function addGroup() {
+            const name = prompt('새 그룹 이름을 입력하세요:');
+            if (name) {
+                userGroups.push({ name, lists: [], collapsed: false });
+                await saveGroups();
+                renderSidebar();
+            }
+        }
+
+        async function deleteGroup(idx) {
+            if (confirm('이 그룹을 삭제할까요? (목록은 삭제되지 않습니다)')) {
+                userGroups.splice(idx, 1);
+                await saveGroups();
+                renderSidebar();
+            }
+        }
+
+        async function toggleGroup(idx) {
+            userGroups[idx].collapsed = !userGroups[idx].collapsed;
+            await saveGroups();
+            renderSidebar();
+        }
+
+        async function saveGroups() {
+            await fetch('/api/groups', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    groups: userGroups,
+                    ungroupedCollapsed: ungroupedCollapsed
+                })
+            });
+        }
+
+        let activeDatePicker = { listId: null, taskId: null };
+
+        function showDueDateMenu(btn, listId, taskId, currentDate = null) {
+            const popup = document.getElementById('date-picker-popup');
+            const rect = btn.getBoundingClientRect();
+            
+            activeDatePicker = { listId, taskId };
+            const dateValue = currentDate || new Date().toISOString().split('T')[0];
+            
+            // 텍스트박스에 요일 포함 표시
+            document.getElementById('date-input-field').value = formatDate(dateValue);
+            // 숨겨진 피커에는 YYYY-MM-DD만 저장
+            document.getElementById('hidden-date-picker').value = dateValue;
+            
+            popup.style.top = `${rect.bottom + window.scrollY + 5}px`;
+            popup.style.left = `${rect.left + window.scrollX - 50}px`;
+            popup.classList.remove('hidden');
+
+            // Close when clicking outside
+            setTimeout(() => {
+                const closeHandler = (e) => {
+                    if (!popup.contains(e.target) && !btn.contains(e.target)) {
+                        closeDatePicker();
+                        document.removeEventListener('click', closeHandler);
+                    }
+                };
+                document.addEventListener('click', closeHandler);
+            }, 10);
+        }
+
+        function handleHiddenDateChange(value) {
+            if (value) {
+                document.getElementById('date-input-field').value = formatDate(value);
+            }
+        }
+
+        function closeDatePicker() {
+            document.getElementById('date-picker-popup').classList.add('hidden');
+        }
+
+        async function applyDueDate() {
+            const date = document.getElementById('hidden-date-picker').value;
+            if (date) {
+                await setDueDate(activeDatePicker.listId, activeDatePicker.taskId, date);
+                closeDatePicker();
+            }
+        }
+
+        async function clearDueDate() {
+            await setDueDate(activeDatePicker.listId, activeDatePicker.taskId, null);
+            closeDatePicker();
         }
 
         function selectList(id) {
@@ -283,19 +563,13 @@
         }
 
         function sortAndRenderTasks() {
-            // 중요도(high 우선), 마감일 순으로 정렬
             cachedTasks.sort((a, b) => {
-                // 1. 중요도 (high가 0, normal이 1로 평가되도록)
                 const aImp = a.importance === 'high' ? 0 : 1;
                 const bImp = b.importance === 'high' ? 0 : 1;
                 if (aImp !== bImp) return aImp - bImp;
-
-                // 2. 마감일 (null은 뒤로)
                 if (a.due_date && !b.due_date) return -1;
                 if (!a.due_date && b.due_date) return 1;
-                if (a.due_date && b.due_date) {
-                    return a.due_date.localeCompare(b.due_date);
-                }
+                if (a.due_date && b.due_date) return a.due_date.localeCompare(b.due_date);
                 return 0;
             });
             renderTasks(cachedTasks);
@@ -304,7 +578,6 @@
         function parseDate(dateStr) {
             if (!dateStr) return null;
             const parts = dateStr.split('-');
-            // 연, 월(0-11), 일로 Date 객체 생성 (로컬 시간 기준)
             return new Date(parts[0], parts[1] - 1, parts[2]);
         }
 
@@ -313,10 +586,13 @@
             container.innerHTML = '';
             const now = new Date();
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            
+
             const tomorrow = new Date(today);
             tomorrow.setDate(today.getDate() + 1);
-            
+
+            const yesterday = new Date(today);
+            yesterday.setDate(today.getDate() - 1);
+
             const endOfWeek = new Date(today);
             const diff = 7 - (today.getDay() === 0 ? 7 : today.getDay());
             endOfWeek.setDate(today.getDate() + diff);
@@ -325,16 +601,15 @@
             tasks.forEach(task => {
                 const card = document.createElement('div');
                 card.id = `task-${task.id}`;
-                
+
                 const isImportant = task.importance === 'high';
                 const dueDate = parseDate(task.due_date);
-                
+
                 const isToday = dueDate && dueDate.getTime() === today.getTime();
                 const isTomorrow = dueDate && dueDate.getTime() === tomorrow.getTime();
-                const isOverdue = dueDate && dueDate < today;
-                const isThisWeek = dueDate && !isToday && !isTomorrow && !isOverdue && dueDate <= endOfWeek;
-
-                // 테두리 및 배경 색상 결정 로직
+                const isYesterday = dueDate && dueDate.getTime() === yesterday.getTime();
+                const isOverdue = dueDate && dueDate.getTime() < today.getTime();
+                const isThisWeek = dueDate && !isToday && !isTomorrow && !isYesterday && !isOverdue && dueDate <= endOfWeek;
                 let borderColor = 'border-slate-100';
                 let bgColor = 'bg-white';
                 let borderSize = 'border';
@@ -360,18 +635,21 @@
                     bgColor = 'bg-sky-50/5';
                 }
 
-                card.className = `group task-card ${bgColor} p-4 rounded-2xl ${borderSize} ${borderColor} flex flex-col transition-all`;
+                card.className = `group task-card ${bgColor} px-4 py-3 rounded-2xl ${borderSize} ${borderColor} flex flex-col transition-all`;
                 
                 let subtasksHtml = '';
                 if (task.subtasks && task.subtasks.length > 0) {
                     subtasksHtml = `
-                        <div class="mt-3 ml-10 space-y-2.5 border-l-2 border-slate-100 pl-4 py-1">
+                        <div class="mt-2 ml-10 space-y-1.5 border-l-2 border-slate-100 pl-4 py-1">
                             ${task.subtasks.map(st => `
                                 <div class="flex items-center space-x-3 group/sub">
                                     <input type="checkbox" ${st.isChecked ? 'checked' : ''} 
                                            onchange="toggleSubtask('${task.list_id}', '${task.id}', '${st.id}', this.checked, this)"
-                                           class="w-4 h-4 rounded border-slate-300 text-blue-500 focus:ring-blue-500/20 cursor-pointer">
-                                    <span class="text-[13px] ${st.isChecked ? 'line-through text-slate-400 font-medium' : 'text-slate-600 font-semibold'} transition-all cursor-default">
+                                           class="w-3.5 h-3.5 rounded border-slate-300 text-blue-500 focus:ring-blue-500/20 cursor-pointer">
+                                    <span class="text-[12.5px] ${st.isChecked ? 'line-through text-slate-400 font-medium' : 'text-slate-600 font-semibold'} transition-all outline-none"
+                                          contenteditable="true"
+                                          onblur="updateSubtaskTitle('${task.list_id}', '${task.id}', '${st.id}', this)"
+                                          onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }">
                                         ${st.displayName}
                                     </span>
                                 </div>
@@ -381,36 +659,40 @@
                 }
 
                 card.innerHTML = `
-                    <div class="flex items-center space-x-4">
-                        <div class="flex-shrink-0">
-                            <div class="relative w-6 h-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 mr-4">
+                            <div class="relative w-5 h-5">
                                 <input type="checkbox" onchange="completeTask('${task.list_id}', '${task.id}')"
-                                       class="peer appearance-none w-6 h-6 rounded-full border-2 border-slate-200 checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer">
-                                <i class="fas fa-check absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[10px] text-white opacity-0 peer-checked:opacity-100 pointer-events-none"></i>
+                                       class="peer appearance-none w-5 h-5 rounded-full border-2 border-slate-200 checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer">
+                                <i class="fas fa-check absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[9px] text-white opacity-0 peer-checked:opacity-100 pointer-events-none"></i>
                             </div>
                         </div>
-                        <div class="flex-grow min-w-0">
-                            <div class="flex items-center space-x-2">
-                                <h3 class="text-[15px] font-bold text-slate-700 group-hover:text-blue-900 transition-colors outline-none"
+                        <div class="flex-grow min-w-0 flex items-center justify-between">
+                            <div class="flex items-center space-x-2 min-w-0">
+                                <h3 class="text-[14.5px] font-bold text-slate-700 group-hover:text-blue-900 transition-colors outline-none truncate"
                                     contenteditable="true"
                                     onblur="updateTaskTitle('${task.list_id}', '${task.id}', this)"
                                     onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }">
                                     ${task.title}
                                 </h3>
                                 <button onclick="toggleImportance('${task.list_id}', '${task.id}', '${task.importance}')" 
-                                        class="star-btn ml-1 focus:outline-none transition-all">
+                                        class="star-btn flex-shrink-0 focus:outline-none transition-all">
                                     ${isImportant ? 
                                         '<i class="fas fa-star text-amber-500 text-sm"></i>' : 
-                                        '<i class="far fa-star text-amber-400 text-sm opacity-0 group-hover:opacity-100 transition-opacity"></i>'}
+                                        '<i class="far fa-star text-amber-400 text-[13px] opacity-0 group-hover:opacity-100 transition-opacity"></i>'}
                                 </button>
                             </div>
-                            <div class="flex items-center text-[11px] mt-1.5 space-x-3 text-slate-400 font-bold uppercase tracking-widest">
-                                <span class="flex items-center"><i class="fas fa-folder mr-1.5 opacity-60"></i>${task.list_name}</span>
+                            
+                            <div class="flex-shrink-0 ml-4 flex items-center">
                                 ${task.due_date ? `
-                                    <span class="flex items-center ${isOverdue ? 'text-rose-500' : (isToday ? 'text-emerald-600' : (isTomorrow ? 'text-blue-600' : ''))}">
-                                        <i class="far fa-calendar-check mr-1.5 opacity-60"></i>
-                                        ${formatDate(task.due_date)}
-                                    </span>` : ''}
+                                    <button onclick="showDueDateMenu(this, '${task.list_id}', '${task.id}', '${task.due_date}')" class="text-[11px] font-bold px-2 py-1 rounded-lg hover:bg-slate-100 transition-all ${isOverdue ? 'text-rose-500 bg-rose-50/50' : (isToday ? 'text-emerald-600 bg-emerald-50/50' : (isTomorrow ? 'text-blue-600 bg-blue-50/50' : 'text-slate-400'))}">
+                                        <i class="far fa-calendar-check mr-1 opacity-60"></i>
+                                        ${isToday ? '오늘' : (isTomorrow ? '내일' : (isYesterday ? '어제' : formatDate(task.due_date)))}
+                                    </button>` : `
+                                    <button onclick="showDueDateMenu(this, '${task.list_id}', '${task.id}')" class="due-date-btn text-[10px] font-black uppercase tracking-tighter text-slate-300 hover:text-blue-500 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100 transition-all">
+                                        기한 추가
+                                    </button>
+                                `}
                             </div>
                         </div>
                     </div>
@@ -420,10 +702,32 @@
             });
         }
 
+        async function setDueDate(listId, taskId, date) {
+            try {
+                const response = await fetch(`/api/tasks/${listId}/${taskId}/due`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ due_date: date })
+                });
+                if (response.ok) fetchTasks(true);
+            } catch (err) { console.error(err); }
+        }
+
+        async function updateSubtaskTitle(listId, taskId, subtaskId, element) {
+            const newTitle = element.innerText.trim();
+            if (!newTitle) return;
+            try {
+                const response = await fetch(`/api/subtask/update/${listId}/${taskId}/${subtaskId}`, {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title: newTitle })
+                });
+                if (!response.ok) throw new Error('Update failed');
+            } catch (err) { console.error(err); alert('서브태스크 수정 중 오류가 발생했습니다.'); }
+        }
+
         async function toggleSubtask(listId, taskId, subtaskId, checked, element) {
             const label = element.nextElementSibling;
-            
-            // UI 즉시 반영 (Optimistic UI)
             if (checked) {
                 label.classList.add('line-through', 'text-slate-400', 'font-medium');
                 label.classList.remove('text-slate-600', 'font-semibold');
@@ -431,56 +735,44 @@
                 label.classList.remove('line-through', 'text-slate-400', 'font-medium');
                 label.classList.add('text-slate-600', 'font-semibold');
             }
-
             try {
                 const response = await fetch(`/api/subtask/complete/${listId}/${taskId}/${subtaskId}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ checked: checked })
                 });
-                if (!response.ok) throw new Error('업데이트 실패');
+                if (!response.ok) throw new Error('Update failed');
             } catch (err) {
-                alert('서브태스크 업데이트 중 오류가 발생했습니다.');
-                console.error(err);
-                
-                // 오류 시 UI 원복
                 element.checked = !checked;
-                if (!checked) {
-                    label.classList.add('line-through', 'text-slate-400', 'font-medium');
-                    label.classList.remove('text-slate-600', 'font-semibold');
-                } else {
-                    label.classList.remove('line-through', 'text-slate-400', 'font-medium');
-                    label.classList.add('text-slate-600', 'font-semibold');
-                }
+                toggleSubtask(listId, taskId, subtaskId, !checked, element);
+                alert('서브태스크 업데이트 중 오류가 발생했습니다.');
             }
         }
 
         function formatDate(dateStr) {
             const d = parseDate(dateStr);
             if (!d) return '';
-            const now = new Date();
-            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-            if (d.getTime() === today.getTime()) return '오늘';
-            return (d.getMonth() + 1) + '월 ' + d.getDate() + '일';
+            const days = ['일', '월', '화', '수', '목', '금', '토'];
+            const dayName = days[d.getDay()];
+            
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            
+            return `${year}-${month}-${day} (${dayName})`;
         }
 
         async function addTask() {
             const input = document.getElementById('task-input');
             const title = input.value.trim();
-            if (!title) return;
-            let targetListId = currentListId;
-            if (!targetListId) {
-                const sidebarItems = document.querySelectorAll('.sidebar-item');
-                if (sidebarItems.length > 0) targetListId = sidebarItems[0].id.replace('side-chip-', '');
-                else { alert('목록 정보를 불러오는 중입니다...'); return; }
-            }
+            if (!title || isProcessing) return;
             isProcessing = true;
             input.disabled = true;
             try {
                 const response = await fetch('/api/tasks', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ title: title, list_id: targetListId })
+                    body: JSON.stringify({ title: title, list_id: currentListId })
                 });
                 if (response.ok) { input.value = ''; await fetchTasks(); }
             } finally { input.disabled = false; isProcessing = false; input.focus(); }
@@ -490,9 +782,11 @@
             const card = document.getElementById(`task-${taskId}`);
             card.classList.add('completed');
             try {
-                await fetch(`/api/complete/${listId}/${taskId}`, { method: 'POST' });
-                card.classList.add('fade-out');
-                setTimeout(() => card.remove(), 400);
+                const resp = await fetch(`/api/complete/${listId}/${taskId}`, { method: 'POST' });
+                if (resp.ok) {
+                    card.classList.add('fade-out');
+                    setTimeout(() => card.remove(), 400);
+                } else { throw new Error('Fail'); }
             } catch (err) { card.classList.remove('completed'); card.querySelector('input').checked = false; }
         }
 
@@ -500,43 +794,33 @@
             const newTitle = element.innerText.trim();
             if (!newTitle) return;
             try {
-                const response = await fetch(`/api/tasks/${listId}/${taskId}`, {
+                await fetch(`/api/tasks/${listId}/${taskId}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ title: newTitle })
                 });
-                if (!response.ok) throw new Error('Update failed');
-            } catch (err) {
-                console.error(err);
-                alert('일정 수정 중 오류가 발생했습니다.');
-            }
+            } catch (err) { console.error(err); }
         }
 
         async function toggleImportance(listId, taskId, currentImportance) {
             const newImportance = currentImportance === 'high' ? 'normal' : 'high';
-            
-            // Optimistic UI: 로컬 데이터 즉시 업데이트 및 재정렬
             const taskIndex = cachedTasks.findIndex(t => t.id === taskId);
             if (taskIndex !== -1) {
                 cachedTasks[taskIndex].importance = newImportance;
                 sortAndRenderTasks();
             }
-
             try {
                 const response = await fetch(`/api/tasks/${listId}/${taskId}`, {
                     method: 'PATCH',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ importance: newImportance })
                 });
-                if (!response.ok) throw new Error('Update failed');
+                if (!response.ok) throw new Error('Fail');
             } catch (err) {
-                console.error(err);
-                // 실패 시 원복
                 if (taskIndex !== -1) {
                     cachedTasks[taskIndex].importance = currentImportance;
                     sortAndRenderTasks();
                 }
-                alert('중요도 변경 중 오류가 발생했습니다.');
             }
         }
 

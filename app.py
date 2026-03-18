@@ -370,5 +370,88 @@ def update_task(list_id, task_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+GROUPS_FILE = os.path.join(BASE_DIR, 'list_groups.json')
+
+def get_groups():
+    default_data = {"groups": [], "ungroupedCollapsed": False}
+    if os.path.exists(GROUPS_FILE):
+        try:
+            with open(GROUPS_FILE, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+                if isinstance(data, list):
+                    return {"groups": data, "ungroupedCollapsed": False}
+                return data
+        except:
+            return default_data
+    return default_data
+
+def save_groups(data):
+    with open(GROUPS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+
+@app.route('/api/groups', methods=['GET', 'POST'])
+def handle_groups():
+    if request.method == 'POST':
+        data = request.json
+        save_groups(data)
+        return jsonify({"success": True})
+    return jsonify(get_groups())
+
+@app.route('/api/subtask/update/<list_id>/<task_id>/<subtask_id>', methods=['PATCH'])
+def update_subtask(list_id, task_id, subtask_id):
+    token_data = get_refreshed_token()
+    if not token_data: return jsonify({"error": "Not authenticated"}), 401
+    
+    data = request.json
+    title = data.get('title')
+    
+    try:
+        access_token = token_data.get('access_token')
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        url = f"https://graph.microsoft.com/v1.0/me/todo/lists/{list_id}/tasks/{task_id}/checklistItems/{subtask_id}"
+        resp = requests.patch(url, json={"displayName": title}, headers=headers)
+        if resp.status_code in [200, 204]:
+            return jsonify({"success": True})
+        else:
+            return jsonify({"error": resp.text}), resp.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/tasks/<list_id>/<task_id>/due', methods=['PATCH'])
+def update_task_due(list_id, task_id):
+    token_data = get_refreshed_token()
+    if not token_data: return jsonify({"error": "Not authenticated"}), 401
+    
+    data = request.json
+    due_date = data.get('due_date') # Expecting YYYY-MM-DD or None
+    
+    payload = {"dueDateTime": None}
+    if due_date:
+        # Microsoft API expects ISO format with timezone. 
+        # We'll send it as midnight in the user's apparent timezone (which we've been treating as KST).
+        # But Graph API actually prefers UTC. For simplicity, we'll send it as T00:00:00.
+        payload["dueDateTime"] = {
+            "dateTime": f"{due_date}T00:00:00",
+            "timeZone": "UTC"
+        }
+    
+    try:
+        access_token = token_data.get('access_token')
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        url = f"https://graph.microsoft.com/v1.0/me/todo/lists/{list_id}/tasks/{task_id}"
+        resp = requests.patch(url, json=payload, headers=headers)
+        if resp.status_code in [200, 204]:
+            return jsonify({"success": True})
+        else:
+            return jsonify({"error": resp.text}), resp.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001, debug=True)
