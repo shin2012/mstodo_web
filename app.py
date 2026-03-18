@@ -119,6 +119,11 @@ def get_todo_client():
 def index():
     if not get_todo_client():
         return redirect(url_for('settings'))
+    
+    user_agent = request.user_agent.string.lower()
+    if any(keyword in user_agent for keyword in ['mobile', 'android', 'iphone', 'ipad']):
+        return render_template('index_mobile.html')
+        
     return render_template('index.html')
 
 @app.route('/settings', methods=['GET', 'POST'])
