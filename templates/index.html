@@ -145,17 +145,18 @@
             <!-- Sidebar (Desktop Viewport) -->
             <aside class="md:w-64 flex-shrink-0 hidden md:block">
                 <div class="sidebar flex flex-col">
-                    <div class="mb-6 px-1 flex items-center space-x-3">
-                        <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20">
+                    <a href="javascript:void(0)" onclick="selectList(null)" class="mb-6 px-1 flex items-center space-x-3 group">
+                        <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform">
                             <i class="fas fa-check-double text-white text-sm"></i>
                         </div>
                         <h1 class="text-2xl font-black text-slate-800 tracking-tight">to-do list</h1>
-                    </div>
+                    </a>
 
+                    <!-- Special Menu: All Tasks -->
                     <div class="px-2 mb-4">
-                        <button onclick="addGroup()" class="w-full flex items-center justify-center space-x-2 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl text-xs font-bold transition-all">
-                            <i class="fas fa-folder-plus text-[10px] opacity-60"></i>
-                            <span>그룹 추가</span>
+                        <button onclick="selectList(null)" id="all-tasks-btn" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all font-bold text-[14px] bg-white shadow-sm border border-slate-200 text-blue-600">
+                            <i class="fas fa-list-ul opacity-70"></i>
+                            <span>모든 할 일</span>
                         </button>
                     </div>
 
@@ -164,10 +165,15 @@
                     </nav>
 
                     <div class="mt-auto pt-6 px-2 flex items-center justify-between">
-                        <a href="/settings" class="w-9 h-9 flex items-center justify-center rounded-full text-slate-400 hover:bg-white hover:text-blue-600 transition-all border border-transparent hover:border-slate-200" title="설정">
-                            <i class="fas fa-cog text-xl"></i>
-                        </a>
-                        <button onclick="fetchTasks()" class="flex items-center space-x-2 bg-white/60 backdrop-blur-md px-4 py-2 rounded-full border border-slate-200/50 shadow-sm hover:bg-white hover:text-blue-500 transition-all active:scale-95 group">
+                        <div class="flex items-center space-x-1">
+                            <a href="/settings" class="w-9 h-9 flex items-center justify-center rounded-full text-slate-400 hover:bg-white hover:text-blue-600 transition-all border border-transparent hover:border-slate-200" title="설정">
+                                <i class="fas fa-cog text-xl"></i>
+                            </a>
+                            <button onclick="addGroup()" class="w-9 h-9 flex items-center justify-center rounded-full text-slate-400 hover:bg-white hover:text-emerald-600 transition-all border border-transparent hover:border-slate-200" title="그룹 추가">
+                                <i class="fas fa-folder-plus text-lg"></i>
+                            </button>
+                        </div>
+                        <button onclick="triggerSync()" class="flex items-center space-x-2 bg-white/60 backdrop-blur-md px-4 py-2 rounded-full border border-slate-200/50 shadow-sm hover:bg-white hover:text-blue-500 transition-all active:scale-95 group">
                             <span class="text-xs font-bold text-slate-500 group-hover:text-blue-500">업데이트</span>
                             <i class="fas fa-sync-alt text-[10px] text-slate-300 group-hover:text-blue-500" id="refresh-icon-desktop"></i>
                         </button>
@@ -180,18 +186,24 @@
                 <header class="mb-4">
                     <div class="flex justify-between items-center mb-4">
                         <div class="flex items-center space-x-3">
-                            <h1 class="text-2xl font-black text-slate-800 tracking-tight">나의 할 일</h1>
+                            <a href="javascript:void(0)" onclick="selectList(null)" class="flex items-center space-x-2">
+                                <div class="w-6 h-6 bg-blue-500 rounded flex items-center justify-center">
+                                    <i class="fas fa-check-double text-white text-[10px]"></i>
+                                </div>
+                                <h1 class="text-2xl font-black text-slate-800 tracking-tight">to-do</h1>
+                            </a>
                             <a href="/settings" class="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-white hover:text-blue-600 transition-all" title="설정">
                                 <i class="fas fa-cog text-xl"></i>
                             </a>
                         </div>
-                        <button onclick="fetchTasks()" class="flex items-center space-x-2 bg-white/60 backdrop-blur-md px-4 py-2 rounded-full border border-slate-200/50 shadow-sm group">
+                        <button onclick="triggerSync()" class="flex items-center space-x-2 bg-white/60 backdrop-blur-md px-4 py-2 rounded-full border border-slate-200/50 shadow-sm group">
                             <span class="text-xs font-bold text-slate-500">업데이트</span>
                             <i class="fas fa-sync-alt text-[10px] text-slate-300" id="refresh-icon-mobile"></i>
                         </button>
                     </div>
                     <!-- Mobile Chips with No-Wrap and Horizontal Scroll -->
                     <div id="list-container" class="flex flex-row flex-nowrap overflow-x-auto space-x-2 pb-2 no-scrollbar select-none w-full">
+                        <button onclick="selectList(null)" id="all-tasks-chip" class="flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all bg-white shadow-sm border border-slate-200 text-blue-600">모든 할 일</button>
                         <!-- Lists injected here -->
                     </div>
                 </header>
@@ -261,9 +273,11 @@
                 renderSidebar();
                 renderMobileChips();
 
-                if (allLists.length > 0 && currentListId === null) {
-                    selectList(allLists[0].id);
-                }
+                // Always start with All Tasks (null) or restore currentListId if navigating
+                selectList(currentListId);
+                
+                // Trigger initial sync for lists and tasks in the background
+                triggerSync();
             } catch (err) { console.error('Failed to fetch lists or groups', err); }
         }
 
@@ -515,9 +529,25 @@
         }
 
         function selectList(id) {
-            if (!id) return;
             currentListId = id;
-            document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+            
+            // Update UI for All Tasks
+            const allBtn = document.getElementById('all-tasks-btn');
+            const allChip = document.getElementById('all-tasks-chip');
+            if (id === null) {
+                if (allBtn) allBtn.classList.replace('bg-white', 'bg-blue-50');
+                if (allBtn) allBtn.classList.replace('text-blue-600', 'text-blue-700');
+                if (allChip) allChip.classList.add('active');
+            } else {
+                if (allBtn) allBtn.classList.replace('bg-blue-50', 'bg-white');
+                if (allBtn) allBtn.classList.replace('text-blue-700', 'text-blue-600');
+                if (allChip) allChip.classList.remove('active');
+            }
+
+            document.querySelectorAll('.chip').forEach(c => {
+                if (c.id === 'all-tasks-chip') return;
+                c.classList.remove('active');
+            });
             const activeChip = document.getElementById(`chip-${id}`);
             if (activeChip) {
                 activeChip.classList.add('active');
@@ -526,25 +556,43 @@
             document.querySelectorAll('.sidebar-item').forEach(c => c.classList.remove('active'));
             const activeSide = document.getElementById(`side-chip-${id}`);
             if (activeSide) activeSide.classList.add('active');
+            
             fetchTasks();
+            triggerSync(); // Background sync on every navigation
+        }
+
+        async function triggerSync() {
+            const icons = [document.getElementById('refresh-icon-mobile'), document.getElementById('refresh-icon-desktop')];
+            icons.forEach(i => i && i.classList.add('fa-spin'));
+            
+            try {
+                const url = `/api/sync/all${currentListId ? '?list_id=' + currentListId : ''}`;
+                const response = await fetch(url);
+                const result = await response.json();
+                if (result.has_changes) {
+                    // Silently refresh if changes were found
+                    fetchTasks(true);
+                }
+            } catch (err) {
+                console.error('Sync failed', err);
+            } finally {
+                icons.forEach(i => i && i.classList.remove('fa-spin'));
+            }
         }
 
         async function fetchTasks(silent = false) {
-            if (!currentListId) return;
             const loading = document.getElementById('loading');
             const taskList = document.getElementById('task-list');
             const emptyState = document.getElementById('empty-state');
-            const icons = [document.getElementById('refresh-icon-mobile'), document.getElementById('refresh-icon-desktop')];
 
             if (!silent) {
                 loading.classList.remove('hidden');
                 taskList.classList.add('hidden');
                 emptyState.classList.add('hidden');
             }
-            icons.forEach(i => i && i.classList.add('fa-spin'));
 
             try {
-                const url = `/api/tasks?list_id=${currentListId}`;
+                const url = `/api/tasks${currentListId ? '?list_id=' + currentListId : ''}`;
                 const response = await fetch(url);
                 cachedTasks = await response.json();
                 if (cachedTasks.length === 0) {
@@ -558,7 +606,6 @@
             } catch (err) { console.error(err); } 
             finally {
                 loading.classList.add('hidden');
-                icons.forEach(i => i && i.classList.remove('fa-spin'));
             }
         }
 
@@ -687,7 +734,7 @@
                                 ${task.due_date ? `
                                     <button onclick="showDueDateMenu(this, '${task.list_id}', '${task.id}', '${task.due_date}')" class="text-[11px] font-bold px-2 py-1 rounded-lg hover:bg-slate-100 transition-all ${isOverdue ? 'text-rose-500 bg-rose-50/50' : (isToday ? 'text-emerald-600 bg-emerald-50/50' : (isTomorrow ? 'text-blue-600 bg-blue-50/50' : 'text-slate-400'))}">
                                         <i class="far fa-calendar-check mr-1 opacity-60"></i>
-                                        ${isToday ? '오늘' : (isTomorrow ? '내일' : (isYesterday ? '어제' : formatDate(task.due_date)))}
+                                        ${formatDate(task.due_date)}
                                     </button>` : `
                                     <button onclick="showDueDateMenu(this, '${task.list_id}', '${task.id}')" class="due-date-btn text-[10px] font-black uppercase tracking-tighter text-slate-300 hover:text-blue-500 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100 transition-all">
                                         기한 추가
@@ -752,6 +799,18 @@
         function formatDate(dateStr) {
             const d = parseDate(dateStr);
             if (!d) return '';
+            
+            const now = new Date();
+            const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            const tomorrow = new Date(today);
+            tomorrow.setDate(today.getDate() + 1);
+            const yesterday = new Date(today);
+            yesterday.setDate(today.getDate() - 1);
+            
+            if (d.getTime() === today.getTime()) return '오늘';
+            if (d.getTime() === tomorrow.getTime()) return '내일';
+            if (d.getTime() === yesterday.getTime()) return '어제';
+            
             const days = ['일', '월', '화', '수', '목', '금', '토'];
             const dayName = days[d.getDay()];
             

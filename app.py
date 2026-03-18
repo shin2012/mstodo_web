@@ -10,6 +10,7 @@ from concurrent.futures import ThreadPoolExecutor
 from flask import Flask, render_template, jsonify, request, redirect, url_for, session
 from werkzeug.middleware.proxy_fix import ProxyFix
 from pymstodo import ToDoConnection
+import database
 
 app = Flask(__name__)
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
@@ -174,26 +175,9 @@ def auth_callback():
 def get_lists():
     token_data = get_refreshed_token()
     if not token_data: return jsonify({"error": "Not authenticated"}), 401
-    
     try:
-        access_token = token_data.get('access_token')
-        headers = {"Authorization": f"Bearer {access_token}"}
-        url = "https://graph.microsoft.com/v1.0/me/todo/lists"
-        all_lists = []
-        
-        while url:
-            resp = requests.get(url, headers=headers)
-            if resp.status_code != 200: break
-            data = resp.json()
-            for l in data.get('value', []):
-                all_lists.append({
-                    'id': l['id'], 
-                    'name': l['displayName'], 
-                    'wellKnownName': l.get('wellKnownName', 'none')
-                })
-            url = data.get('@odata.nextLink')
-            
-        return jsonify(all_lists)
+        lists = database.get_active_lists()
+        return jsonify(lists)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -202,93 +186,119 @@ def get_tasks():
     token_data = get_refreshed_token()
     if not token_data: return jsonify({"error": "Not authenticated"}), 401
     
-    access_token = token_data.get('access_token')
-    headers = {
-        "Authorization": f"Bearer {access_token}",
-        "Content-Type": "application/json"
-    }
-
     list_id_param = request.args.get('list_id')
     try:
-        # 모든 리스트 목록 가져오기 (페이지네이션 처리)
-        lists_url = "https://graph.microsoft.com/v1.0/me/todo/lists"
-        target_lists = []
-        while lists_url:
-            resp = requests.get(lists_url, headers=headers)
-            if resp.status_code != 200: break
-            data = resp.json()
-            for l in data.get('value', []):
-                if not list_id_param or l['id'] == list_id_param:
-                    target_lists.append({'id': l['id'], 'name': l['displayName']})
-            lists_url = data.get('@odata.nextLink')
-
-        all_tasks = []
-        # 리스트를 20개씩 끊어서 Batch 처리
-        for i in range(0, len(target_lists), 20):
-            chunk = target_lists[i:i+20]
-            requests_payload = []
-            for idx, task_list in enumerate(chunk):
-                requests_payload.append({
-                    "id": str(idx),
-                    "method": "GET",
-                    "url": f"/me/todo/lists/{task_list['id']}/tasks?$filter=status ne 'completed'&$expand=checklistItems"
-                })
-            
-            batch_resp = requests.post("https://graph.microsoft.com/v1.0/$batch", 
-                                     json={"requests": requests_payload}, 
-                                     headers=headers)
-            
-            if batch_resp.status_code == 200:
-                responses = batch_resp.json().get('responses', [])
-                for resp in responses:
-                    original_idx = int(resp.get('id'))
-                    task_list = chunk[original_idx]
-                    if resp.get('status') == 200:
-                        body = resp.get('body', {})
-                        tasks_data = body.get('value', [])
-                        
-                        # 특정 리스트 내에 할 일이 20개 이상이라서 다음 페이지가 있는 경우 추가 로드
-                        next_link = body.get('@odata.nextLink')
-                        while next_link:
-                            # Batch 응답 내의 nextLink는 전체 URL이거나 상대 경로일 수 있음
-                            if not next_link.startswith('http'):
-                                next_link = f"https://graph.microsoft.com/v1.0{next_link}"
-                            next_resp = requests.get(next_link, headers=headers)
-                            if next_resp.status_code == 200:
-                                next_data = next_resp.json()
-                                tasks_data.extend(next_data.get('value', []))
-                                next_link = next_data.get('@odata.nextLink')
-                            else:
-                                break
-
-                        for task in tasks_data:
-                            due_date = None
-                            if task.get('dueDateTime'):
-                                try:
-                                    dt_str = task['dueDateTime']['dateTime'].split('.')[0]
-                                    dt = datetime.strptime(dt_str, '%Y-%m-%dT%H:%M:%S')
-                                    kst_dt = dt + timedelta(hours=9)
-                                    due_date = kst_dt.strftime('%Y-%m-%d')
-                                except:
-                                    due_date = task['dueDateTime']['dateTime'].split('T')[0]
-                            
-                            all_tasks.append({
-                                'id': task['id'],
-                                'list_id': task_list['id'],
-                                'list_name': task_list['name'],
-                                'title': task['title'],
-                                'due_date': due_date,
-                                'status': task['status'],
-                                'importance': task['importance'],
-                                'subtasks': task.get('checklistItems', [])
-                            })
+        tasks = database.get_active_tasks(list_id_param)
         
-        if not list_id_param:
-            all_tasks.sort(key=lambda x: (x['importance'] != 'high', x['list_name'], x['due_date'] is None, x['due_date']))
-        else:
-            all_tasks.sort(key=lambda x: (x['importance'] != 'high', x['due_date'] is None, x['due_date']))
+        # Add list_name to tasks for UI
+        active_lists = {lst['id']: lst['name'] for lst in database.get_active_lists()}
+        
+        formatted_tasks = []
+        for task in tasks:
+            if task['list_id'] not in active_lists:
+                continue # Skip tasks whose lists are deleted
+            task['list_name'] = active_lists[task['list_id']]
+            formatted_tasks.append(task)
             
-        return jsonify(all_tasks)
+        if not list_id_param:
+            formatted_tasks.sort(key=lambda x: (x['importance'] != 'high', x['list_name'], x['due_date'] is None, x['due_date']))
+        else:
+            formatted_tasks.sort(key=lambda x: (x['importance'] != 'high', x['due_date'] is None, x['due_date']))
+            
+        return jsonify(formatted_tasks)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/sync/all')
+def sync_all():
+    token_data = get_refreshed_token()
+    if not token_data: return jsonify({"error": "Not authenticated"}), 401
+    
+    access_token = token_data.get('access_token')
+    headers = {"Authorization": f"Bearer {access_token}"}
+    
+    list_id_param = request.args.get('list_id')
+    has_changes = False
+    
+    try:
+        # 1. Sync lists
+        delta_link = database.get_sync_token("lists")
+        url = delta_link if delta_link else "https://graph.microsoft.com/v1.0/me/todo/lists/delta"
+        
+        lists_data = []
+        lists_synced = False
+        
+        while url:
+            resp = requests.get(url, headers=headers)
+            if resp.status_code == 410:
+                database.clear_sync_token("lists")
+                url = "https://graph.microsoft.com/v1.0/me/todo/lists/delta"
+                continue
+            if resp.status_code != 200:
+                break
+                
+            data = resp.json()
+            items = data.get('value', [])
+            if items:
+                has_changes = True
+                lists_data.extend(items)
+                
+            if '@odata.nextLink' in data:
+                url = data['@odata.nextLink']
+            elif '@odata.deltaLink' in data:
+                database.set_sync_token("lists", data['@odata.deltaLink'])
+                lists_synced = True
+                break
+            else:
+                break
+                
+        if lists_data:
+            database.upsert_lists(lists_data)
+            
+        # 2. Sync tasks
+        active_lists = database.get_active_lists()
+        lists_to_sync = [l for l in active_lists if l['id'] == list_id_param] if list_id_param else active_lists
+        
+        def sync_list_tasks(task_list):
+            nonlocal has_changes
+            l_id = task_list['id']
+            d_link = database.get_sync_token(f"tasks_{l_id}")
+            t_url = d_link if d_link else f"https://graph.microsoft.com/v1.0/me/todo/lists/{l_id}/tasks/delta"
+            
+            t_data = []
+            while t_url:
+                t_resp = requests.get(t_url, headers=headers)
+                if t_resp.status_code == 410:
+                    database.clear_sync_token(f"tasks_{l_id}")
+                    t_url = f"https://graph.microsoft.com/v1.0/me/todo/lists/{l_id}/tasks/delta"
+                    continue
+                if t_resp.status_code != 200:
+                    break
+                    
+                t_resp_data = t_resp.json()
+                t_items = t_resp_data.get('value', [])
+                if t_items:
+                    has_changes = True
+                    t_data.extend(t_items)
+                    
+                if '@odata.nextLink' in t_resp_data:
+                    t_url = t_resp_data['@odata.nextLink']
+                elif '@odata.deltaLink' in t_resp_data:
+                    database.set_sync_token(f"tasks_{l_id}", t_resp_data['@odata.deltaLink'])
+                    break
+                else:
+                    break
+                    
+            if t_data:
+                database.upsert_tasks(l_id, t_data)
+
+        # Sync tasks sequentially or with ThreadPool
+        with ThreadPoolExecutor(max_workers=5) as executor:
+            executor.map(sync_list_tasks, lists_to_sync)
+            
+        return jsonify({"has_changes": has_changes})
     except Exception as e:
         import traceback
         traceback.print_exc()
@@ -311,6 +321,15 @@ def complete_subtask(list_id, task_id, subtask_id):
         url = f"https://graph.microsoft.com/v1.0/me/todo/lists/{list_id}/tasks/{task_id}/checklistItems/{subtask_id}"
         resp = requests.patch(url, json={"isChecked": is_checked}, headers=headers)
         if resp.status_code in [200, 204]:
+            # Update local DB
+            task = database.get_task_by_id(task_id)
+            if task:
+                subtasks = task.get('checklistItems', [])
+                for sub in subtasks:
+                    if sub['id'] == subtask_id:
+                        sub['isChecked'] = is_checked
+                        break
+                database.update_task_local(task_id, checklist_items=subtasks)
             return jsonify({"success": True})
         else:
             return jsonify({"error": resp.text}), resp.status_code
@@ -319,8 +338,8 @@ def complete_subtask(list_id, task_id, subtask_id):
 
 @app.route('/api/tasks', methods=['POST'])
 def add_task():
-    client = get_todo_client()
-    if not client: return jsonify({"error": "Not authenticated"}), 401
+    token_data = get_refreshed_token()
+    if not token_data: return jsonify({"error": "Not authenticated"}), 401
     
     data = request.json
     title = data.get('title')
@@ -330,18 +349,40 @@ def add_task():
         return jsonify({"error": "Missing title or list_id"}), 400
         
     try:
-        task = client.create_task(title, list_id)
-        return jsonify({"success": True, "task_id": task.task_id})
+        access_token = token_data.get('access_token')
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        url = f"https://graph.microsoft.com/v1.0/me/todo/lists/{list_id}/tasks"
+        resp = requests.post(url, json={"title": title}, headers=headers)
+        if resp.status_code == 201:
+            task_data = resp.json()
+            database.upsert_tasks(list_id, [task_data])
+            return jsonify({"success": True, "task_id": task_data['id']})
+        else:
+            return jsonify({"error": resp.text}), resp.status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/complete/<list_id>/<task_id>', methods=['POST'])
 def complete_task(list_id, task_id):
-    client = get_todo_client()
-    if not client: return jsonify({"error": "Not authenticated"}), 401
+    token_data = get_refreshed_token()
+    if not token_data: return jsonify({"error": "Not authenticated"}), 401
+    
     try:
-        client.complete_task(task_id, list_id)
-        return jsonify({"success": True})
+        access_token = token_data.get('access_token')
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        url = f"https://graph.microsoft.com/v1.0/me/todo/lists/{list_id}/tasks/{task_id}"
+        resp = requests.patch(url, json={"status": "completed"}, headers=headers)
+        if resp.status_code in [200, 204]:
+            database.update_task_status_local(task_id, "completed")
+            return jsonify({"success": True})
+        else:
+            return jsonify({"error": resp.text}), resp.status_code
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
@@ -364,6 +405,7 @@ def update_task(list_id, task_id):
         url = f"https://graph.microsoft.com/v1.0/me/todo/lists/{list_id}/tasks/{task_id}"
         resp = requests.patch(url, json=payload, headers=headers)
         if resp.status_code in [200, 204]:
+            database.update_task_local(task_id, **payload)
             return jsonify({"success": True})
         else:
             return jsonify({"error": resp.text}), resp.status_code
@@ -414,6 +456,15 @@ def update_subtask(list_id, task_id, subtask_id):
         url = f"https://graph.microsoft.com/v1.0/me/todo/lists/{list_id}/tasks/{task_id}/checklistItems/{subtask_id}"
         resp = requests.patch(url, json={"displayName": title}, headers=headers)
         if resp.status_code in [200, 204]:
+            # Update local DB
+            task = database.get_task_by_id(task_id)
+            if task:
+                subtasks = task.get('checklistItems', [])
+                for sub in subtasks:
+                    if sub['id'] == subtask_id:
+                        sub['displayName'] = title
+                        break
+                database.update_task_local(task_id, checklist_items=subtasks)
             return jsonify({"success": True})
         else:
             return jsonify({"error": resp.text}), resp.status_code
@@ -447,6 +498,7 @@ def update_task_due(list_id, task_id):
         url = f"https://graph.microsoft.com/v1.0/me/todo/lists/{list_id}/tasks/{task_id}"
         resp = requests.patch(url, json=payload, headers=headers)
         if resp.status_code in [200, 204]:
+            database.update_task_local(task_id, due_date=due_date)
             return jsonify({"success": True})
         else:
             return jsonify({"error": resp.text}), resp.status_code
