@@ -185,11 +185,14 @@ def get_lists():
 def get_tasks():
     token_data = get_refreshed_token()
     if not token_data: return jsonify({"error": "Not authenticated"}), 401
-    
+
     list_id_param = request.args.get('list_id')
+    list_ids_param = request.args.get('list_ids')
+
     try:
-        tasks = database.get_active_tasks(list_id_param)
-        
+        list_ids = list_ids_param.split(',') if list_ids_param else None
+        tasks = database.get_active_tasks(list_id=list_id_param, list_ids=list_ids)
+
         # Add list_name to tasks for UI
         active_lists = {lst['id']: lst['name'] for lst in database.get_active_lists()}
         

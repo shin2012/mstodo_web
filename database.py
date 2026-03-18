@@ -138,11 +138,14 @@ def upsert_tasks(list_id, tasks_data):
     conn.commit()
     conn.close()
 
-def get_active_tasks(list_id=None):
+def get_active_tasks(list_id=None, list_ids=None):
     conn = get_db()
     c = conn.cursor()
     
-    if list_id:
+    if list_ids:
+        placeholders = ','.join(['?'] * len(list_ids))
+        c.execute(f'SELECT * FROM tasks WHERE list_id IN ({placeholders}) AND is_deleted = 0 AND status != "completed"', list_ids)
+    elif list_id:
         c.execute('SELECT * FROM tasks WHERE list_id = ? AND is_deleted = 0 AND status != "completed"', (list_id,))
     else:
         c.execute('SELECT * FROM tasks WHERE is_deleted = 0 AND status != "completed"')

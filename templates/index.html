@@ -168,13 +168,21 @@
                     </nav>
 
                     <div class="mt-auto pt-6 px-2 flex items-center justify-between">
-                        <div class="flex items-center space-x-1">
+                        <div class="flex items-center space-x-1 relative">
                             <a href="/settings" class="w-9 h-9 flex items-center justify-center rounded-full text-slate-400 hover:bg-white hover:text-blue-600 transition-all border border-transparent hover:border-slate-200" title="설정">
                                 <i class="fas fa-cog text-xl"></i>
                             </a>
-                            <button onclick="addGroup()" class="w-9 h-9 flex items-center justify-center rounded-full text-slate-400 hover:bg-white hover:text-emerald-600 transition-all border border-transparent hover:border-slate-200" title="그룹 추가">
+                            <button onclick="toggleAddGroupPopup()" id="btn-add-group" class="w-9 h-9 flex items-center justify-center rounded-full text-slate-400 hover:bg-white hover:text-emerald-600 transition-all border border-transparent hover:border-slate-200" title="그룹 추가">
                                 <i class="fas fa-folder-plus text-lg"></i>
                             </button>
+                            <!-- Add Group Popup -->
+                            <div id="add-group-popup" class="hidden absolute bottom-full left-8 mb-2 w-52 bg-white rounded-xl shadow-xl border border-slate-200 p-3 z-50 transform transition-all origin-bottom-left">
+                                <input type="text" id="add-group-input" placeholder="새 그룹 이름" class="w-full text-[13px] px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 mb-2" onkeydown="if(event.key === 'Enter') confirmAddGroup()">
+                                <div class="flex justify-end space-x-2">
+                                    <button onclick="toggleAddGroupPopup()" class="px-3 py-1.5 text-[11px] font-bold text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">취소</button>
+                                    <button onclick="confirmAddGroup()" class="px-3 py-1.5 text-[11px] font-bold bg-blue-500 text-white hover:bg-blue-600 rounded-lg shadow-sm shadow-blue-500/30 transition-colors">추가</button>
+                                </div>
+                            </div>
                         </div>
                         <button onclick="triggerSync(true)" class="flex items-center space-x-2 bg-white/60 backdrop-blur-md px-4 py-2 rounded-full border border-slate-200/50 shadow-sm hover:bg-white hover:text-blue-500 transition-all active:scale-95 group">
                             <span class="text-xs font-bold text-slate-500 group-hover:text-blue-500">업데이트</span>
@@ -299,20 +307,25 @@
                 const header = document.createElement('div');
                 header.className = 'group-header flex items-center justify-between px-3 py-2 text-slate-400 hover:text-slate-600 transition-colors group';
                 header.onclick = (e) => {
-                    if (e.target.closest('.delete-group-btn') || e.target.closest('.group-name')) return;
+                    if (e.target.closest('.delete-group-btn') || e.target.closest('.group-name') || e.target.closest('.view-group-btn')) return;
                     toggleGroup(groupIdx);
                 };
                 header.innerHTML = `
-                    <div class="flex items-center space-x-2">
-                        <i class="fas fa-chevron-down text-[10px] rotate-icon"></i>
-                        <span class="group-name text-[11px] font-black uppercase tracking-widest outline-none" 
+                    <div class="flex items-center space-x-2 flex-grow min-w-0">
+                        <i class="fas fa-chevron-down text-[10px] rotate-icon flex-shrink-0"></i>
+                        <span class="group-name text-[11px] font-black uppercase tracking-widest outline-none truncate" 
                               contenteditable="true" 
                               onblur="renameGroup(${groupIdx}, this)"
                               onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }">${group.name}</span>
                     </div>
-                    <button onclick="deleteGroup(${groupIdx})" class="delete-group-btn opacity-0 group-hover:opacity-100 hover:text-rose-500 transition-all p-1">
-                        <i class="fas fa-times text-[10px]"></i>
-                    </button>
+                    <div class="flex items-center space-x-1 flex-shrink-0">
+                        <button onclick="selectList('group_${groupIdx}')" class="view-group-btn opacity-0 group-hover:opacity-100 hover:text-blue-500 transition-all p-1" title="그룹 할 일 보기">
+                            <i class="fas fa-list-ul text-[10px]"></i>
+                        </button>
+                        <button onclick="deleteGroup(${groupIdx})" class="delete-group-btn opacity-0 group-hover:opacity-100 hover:text-rose-500 transition-all p-1" title="그룹 삭제">
+                            <i class="fas fa-times text-[10px]"></i>
+                        </button>
+                    </div>
                 `;
 
                 const content = document.createElement('div');
@@ -447,12 +460,26 @@
             });
         }
 
-        async function addGroup() {
-            const name = prompt('새 그룹 이름을 입력하세요:');
+        function toggleAddGroupPopup() {
+            const popup = document.getElementById('add-group-popup');
+            const input = document.getElementById('add-group-input');
+            if (popup.classList.contains('hidden')) {
+                popup.classList.remove('hidden');
+                setTimeout(() => input.focus(), 10);
+            } else {
+                popup.classList.add('hidden');
+                input.value = '';
+            }
+        }
+
+        async function confirmAddGroup() {
+            const input = document.getElementById('add-group-input');
+            const name = input.value.trim();
             if (name) {
                 userGroups.push({ name, lists: [], collapsed: false });
                 await saveGroups();
                 renderSidebar();
+                toggleAddGroupPopup();
             }
         }
 
@@ -567,15 +594,34 @@
             triggerSync(); // Background sync on every navigation
         }
 
+        function getQueryForCurrentSelection() {
+            if (!currentListId) return '';
+            if (currentListId.startsWith('group_')) {
+                const groupIdx = parseInt(currentListId.split('_')[1]);
+                const group = userGroups[groupIdx];
+                if (group && group.lists.length > 0) {
+                    return `?list_ids=${group.lists.join(',')}`;
+                }
+                return `?list_ids=none`; // Empty group
+            }
+            return `?list_id=${currentListId}`;
+        }
+
         async function triggerSync(force = false) {
             const icons = [document.getElementById('refresh-icon-mobile'), document.getElementById('refresh-icon-desktop')];
             icons.forEach(i => i && i.classList.add('fa-spin'));
 
             try {
-                let url = `/api/sync/all?${currentListId ? 'list_id=' + currentListId : ''}`;
-                if (force) url += (url.includes('?') ? '&' : '?') + 'force=1';
+                let query = getQueryForCurrentSelection();
+                // For triggerSync, if it's a group, we might want to sync the specific lists. 
+                // Currently backend doesn't support list_ids for sync, so we just sync all or the specific list.
+                let syncUrl = `/api/sync/all`;
+                if (currentListId && !currentListId.startsWith('group_')) {
+                    syncUrl += `?list_id=${currentListId}`;
+                }
+                if (force) syncUrl += (syncUrl.includes('?') ? '&' : '?') + 'force=1';
 
-                const response = await fetch(url);
+                const response = await fetch(syncUrl);
                 const result = await response.json();
                 if (result.has_changes || force) {
                     fetchTasks(true);
@@ -586,6 +632,7 @@
                 icons.forEach(i => i && i.classList.remove('fa-spin'));
             }
         }
+        
         async function fetchTasks(silent = false) {
             const loading = document.getElementById('loading');
             const taskList = document.getElementById('task-list');
@@ -601,7 +648,8 @@
             }
 
             try {
-                const url = `/api/tasks${currentListId ? '?list_id=' + currentListId : ''}`;
+                const query = getQueryForCurrentSelection();
+                const url = `/api/tasks${query}`;
                 const response = await fetch(url);
                 cachedTasks = await response.json();
                 
@@ -747,6 +795,12 @@
                             </div>
                             
                             <div class="flex-shrink-0 ml-4 flex items-center">
+                                ${(!currentListId || currentListId.startsWith('group_')) && task.list_name ? `
+                                    <span class="mr-2 px-1.5 py-0.5 bg-slate-100/80 text-slate-500 text-[10px] font-bold rounded flex items-center max-w-[80px] truncate" title="${task.list_name}">
+                                        <i class="fas fa-list-ul mr-1 text-[8px] opacity-60"></i>
+                                        <span class="truncate">${task.list_name}</span>
+                                    </span>
+                                ` : ''}
                                 ${task.due_date ? `
                                     <button onclick="showDueDateMenu(this, '${task.list_id}', '${task.id}', '${task.due_date}')" class="text-[11px] font-bold px-2 py-1 rounded-lg hover:bg-slate-100 transition-all ${isOverdue ? 'text-rose-500 bg-rose-50/50' : (isToday ? 'text-emerald-600 bg-emerald-50/50' : (isTomorrow ? 'text-blue-600 bg-blue-50/50' : 'text-slate-400'))}">
                                         <i class="far fa-calendar-check mr-1 opacity-60"></i>
