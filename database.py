@@ -1,6 +1,7 @@
 import sqlite3
 import json
 import os
+from datetime import datetime, timedelta
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mstodo.db')
 
@@ -89,7 +90,24 @@ def upsert_tasks(list_id, tasks_data):
         else:
             due_date_str = None
             if task.get('dueDateTime'):
-                due_date_str = task['dueDateTime'].get('dateTime', '')[:10]
+                dt_str = task['dueDateTime'].get('dateTime', '')
+                tz_str = task['dueDateTime'].get('timeZone', '')
+                try:
+                    # ISO 포맷 파싱 (T00:00:00.0000000 형태 대응)
+                    dt_part = dt_str.split('.')[0].replace('Z', '')
+                    if 'T' not in dt_part:
+                        dt_part += 'T00:00:00'
+                    dt = datetime.fromisoformat(dt_part)
+                    
+                    # MS Graph API는 보통 UTC 00:00으로 기한을 반환함 (KST 기준 전날 15:00일 수 있음)
+                    # UTC인 경우 9시간을 더해 한국 시간으로 보정
+                    if tz_str == 'UTC':
+                        dt += timedelta(hours=9)
+                    
+                    # 최종 날짜 추출
+                    due_date_str = dt.strftime('%Y-%m-%d')
+                except Exception as e:
+                    due_date_str = dt_str[:10]
                 
             checklist_json = json.dumps(task.get('checklistItems', []))
             
@@ -213,6 +231,13 @@ def set_sync_token(resource_type, delta_link):
     
 def clear_sync_token(resource_type):
     set_sync_token(resource_type, None)
+
+def clear_all_sync_tokens():
+    conn = get_db()
+    c = conn.cursor()
+    c.execute('DELETE FROM sync_tokens')
+    conn.commit()
+    conn.close()
 
 def clear_all_data():
     conn = get_db()

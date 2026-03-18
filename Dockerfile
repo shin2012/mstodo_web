@@ -1,6 +1,12 @@
 # Python 3.11 이미지 사용 (pymstodo 최신 버전 호환)
 FROM python:3.11-slim
 
+# 타임존 설정
+ENV TZ=Asia/Seoul
+RUN apt-get update && apt-get install -y tzdata && \
+    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
 # 작업 디렉토리 설정
 WORKDIR /app
 

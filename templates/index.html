@@ -149,7 +149,10 @@
                         <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform">
                             <i class="fas fa-check-double text-white text-sm"></i>
                         </div>
-                        <h1 class="text-2xl font-black text-slate-800 tracking-tight">to-do list</h1>
+                        <div class="flex flex-col">
+                            <h1 class="text-2xl font-black text-slate-800 tracking-tight leading-none">to-do list</h1>
+                            <span id="desktop-clock" class="text-[10px] font-bold text-slate-400 mt-1 tracking-wider"></span>
+                        </div>
                     </a>
 
                     <!-- Special Menu: All Tasks -->
@@ -173,7 +176,7 @@
                                 <i class="fas fa-folder-plus text-lg"></i>
                             </button>
                         </div>
-                        <button onclick="triggerSync()" class="flex items-center space-x-2 bg-white/60 backdrop-blur-md px-4 py-2 rounded-full border border-slate-200/50 shadow-sm hover:bg-white hover:text-blue-500 transition-all active:scale-95 group">
+                        <button onclick="triggerSync(true)" class="flex items-center space-x-2 bg-white/60 backdrop-blur-md px-4 py-2 rounded-full border border-slate-200/50 shadow-sm hover:bg-white hover:text-blue-500 transition-all active:scale-95 group">
                             <span class="text-xs font-bold text-slate-500 group-hover:text-blue-500">업데이트</span>
                             <i class="fas fa-sync-alt text-[10px] text-slate-300 group-hover:text-blue-500" id="refresh-icon-desktop"></i>
                         </button>
@@ -190,13 +193,16 @@
                                 <div class="w-6 h-6 bg-blue-500 rounded flex items-center justify-center">
                                     <i class="fas fa-check-double text-white text-[10px]"></i>
                                 </div>
-                                <h1 class="text-2xl font-black text-slate-800 tracking-tight">to-do</h1>
+                                <div class="flex flex-col">
+                                    <h1 class="text-2xl font-black text-slate-800 tracking-tight leading-none">to-do</h1>
+                                    <span id="mobile-clock" class="text-[9px] font-bold text-slate-400 mt-0.5 tracking-wider"></span>
+                                </div>
                             </a>
                             <a href="/settings" class="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-white hover:text-blue-600 transition-all" title="설정">
                                 <i class="fas fa-cog text-xl"></i>
                             </a>
                         </div>
-                        <button onclick="triggerSync()" class="flex items-center space-x-2 bg-white/60 backdrop-blur-md px-4 py-2 rounded-full border border-slate-200/50 shadow-sm group">
+                        <button onclick="triggerSync(true)" class="flex items-center space-x-2 bg-white/60 backdrop-blur-md px-4 py-2 rounded-full border border-slate-200/50 shadow-sm group">
                             <span class="text-xs font-bold text-slate-500">업데이트</span>
                             <i class="fas fa-sync-alt text-[10px] text-slate-300" id="refresh-icon-mobile"></i>
                         </button>
@@ -561,16 +567,17 @@
             triggerSync(); // Background sync on every navigation
         }
 
-        async function triggerSync() {
+        async function triggerSync(force = false) {
             const icons = [document.getElementById('refresh-icon-mobile'), document.getElementById('refresh-icon-desktop')];
             icons.forEach(i => i && i.classList.add('fa-spin'));
-            
+
             try {
-                const url = `/api/sync/all${currentListId ? '?list_id=' + currentListId : ''}`;
+                let url = `/api/sync/all?${currentListId ? 'list_id=' + currentListId : ''}`;
+                if (force) url += (url.includes('?') ? '&' : '?') + 'force=1';
+
                 const response = await fetch(url);
                 const result = await response.json();
-                if (result.has_changes) {
-                    // Silently refresh if changes were found
+                if (result.has_changes || force) {
                     fetchTasks(true);
                 }
             } catch (err) {
@@ -579,7 +586,6 @@
                 icons.forEach(i => i && i.classList.remove('fa-spin'));
             }
         }
-
         async function fetchTasks(silent = false) {
             const loading = document.getElementById('loading');
             const taskList = document.getElementById('task-list');
@@ -702,7 +708,7 @@
                                 <div class="flex items-center space-x-3 group/sub">
                                     <input type="checkbox" ${st.isChecked ? 'checked' : ''} 
                                            onchange="toggleSubtask('${task.list_id}', '${task.id}', '${st.id}', this.checked, this)"
-                                           class="w-3.5 h-3.5 rounded border-slate-300 text-blue-500 focus:ring-blue-500/20 cursor-pointer">
+                                           class="w-3.5 h-3.5 rounded border-slate-400/60 text-blue-600 focus:ring-blue-500/30 cursor-pointer bg-white/50 hover:border-blue-500">
                                     <span class="text-[12.5px] ${st.isChecked ? 'line-through text-slate-400 font-medium' : 'text-slate-600 font-semibold'} transition-all outline-none"
                                           contenteditable="true"
                                           onblur="updateSubtaskTitle('${task.list_id}', '${task.id}', '${st.id}', this)"
@@ -720,7 +726,7 @@
                         <div class="flex-shrink-0 mr-4">
                             <div class="relative w-5 h-5">
                                 <input type="checkbox" onchange="completeTask('${task.list_id}', '${task.id}')"
-                                       class="peer appearance-none w-5 h-5 rounded-full border-2 border-slate-200 checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer">
+                                       class="peer appearance-none w-5 h-5 rounded-full border-2 border-slate-400/50 hover:border-blue-500 checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer shadow-sm bg-white/50">
                                 <i class="fas fa-check absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[9px] text-white opacity-0 peer-checked:opacity-100 pointer-events-none"></i>
                             </div>
                         </div>
@@ -893,7 +899,79 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => { fetchLists(); });
+        function initClock() {
+            function updateClock() {
+                const now = new Date();
+                const days = ['일', '월', '화', '수', '목', '금', '토'];
+                const month = now.getMonth() + 1;
+                const date = now.getDate();
+                const day = days[now.getDay()];
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const seconds = String(now.getSeconds()).padStart(2, '0');
+                const timeString = `${month}월 ${date}일 (${day}) ${hours}:${minutes}:${seconds}`;
+                
+                const desktopClock = document.getElementById('desktop-clock');
+                const mobileClock = document.getElementById('mobile-clock');
+                if (desktopClock) desktopClock.innerText = timeString;
+                if (mobileClock) mobileClock.innerText = timeString;
+            }
+            setInterval(updateClock, 1000);
+            updateClock();
+        }
+
+        function initBackgroundBySun() {
+            const lat = 37.5665, lng = 126.9780;
+            fetch(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&formatted=0`)
+                .then(res => res.json())
+                .then(data => {
+                    const now = new Date();
+                    const sunrise = new Date(data.results.sunrise);
+                    const sunset = new Date(data.results.sunset);
+                    
+                    const bg = document.querySelector('.bg-animate');
+                    const blob1 = document.querySelector('.blob:not(.blob-2):not(.blob-3)');
+                    const blob2 = document.querySelector('.blob-2');
+                    const blob3 = document.querySelector('.blob-3');
+
+                    let bgGrad = 'linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%)';
+                    let c1 = '59, 130, 246';
+                    let c2 = '99, 102, 241';
+                    let c3 = '37, 99, 235';
+
+                    const oneHour = 60 * 60 * 1000;
+                    
+                    if (now >= new Date(sunset.getTime() + oneHour) || now <= new Date(sunrise.getTime() - oneHour)) {
+                        bgGrad = 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)';
+                        c1 = '49, 46, 129';
+                        c2 = '30, 58, 138';
+                        c3 = '88, 28, 135';
+                    } else if (Math.abs(now - sunrise) <= oneHour) {
+                        bgGrad = 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)';
+                        c1 = '249, 115, 22';
+                        c2 = '234, 88, 12';
+                        c3 = '250, 204, 21';
+                    } else if (Math.abs(now - sunset) <= oneHour) {
+                        bgGrad = 'linear-gradient(135deg, #fdf4ff 0%, #fae8ff 100%)';
+                        c1 = '217, 70, 239';
+                        c2 = '244, 63, 94';
+                        c3 = '147, 51, 234';
+                    }
+                    
+                    if(bg) bg.style.background = bgGrad;
+                    if(blob1) blob1.style.background = `radial-gradient(circle, rgba(${c1}, 0.15) 0%, rgba(${c1}, 0) 70%)`;
+                    if(blob2) blob2.style.background = `radial-gradient(circle, rgba(${c2}, 0.12) 0%, rgba(${c2}, 0) 70%)`;
+                    if(blob3) blob3.style.background = `radial-gradient(circle, rgba(${c3}, 0.1) 0%, rgba(${c3}, 0) 70%)`;
+                })
+                .catch(err => console.error('Failed to fetch sun times', err));
+        }
+
+        document.addEventListener('DOMContentLoaded', () => { 
+            fetchLists(); 
+            initClock();
+            initBackgroundBySun();
+            setInterval(initBackgroundBySun, 10 * 60 * 1000);
+        });
     </script>
 </body>
 </html>

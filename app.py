@@ -217,6 +217,10 @@ def sync_all():
     token_data = get_refreshed_token()
     if not token_data: return jsonify({"error": "Not authenticated"}), 401
     
+    force = request.args.get('force') == '1'
+    if force:
+        database.clear_all_sync_tokens()
+    
     access_token = token_data.get('access_token')
     headers = {"Authorization": f"Bearer {access_token}"}
     
