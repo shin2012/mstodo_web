@@ -153,13 +153,17 @@
                             <h1 class="text-2xl font-black text-slate-800 tracking-tight leading-none">to-do list</h1>
                             <span id="desktop-clock" class="text-[10px] font-bold text-slate-400 mt-1 tracking-wider"></span>
                         </div>
-                        <div class="character-face w-8 h-8 bg-yellow-400 rounded-full flex justify-center items-center gap-1 shadow-sm relative ml-2 group-hover:scale-110 transition-transform">
-                            <div class="eye w-2 h-2.5 bg-white rounded-full relative overflow-hidden">
-                                <div class="pupil w-1 h-1 bg-slate-800 rounded-full absolute top-[40%] left-[40%]"></div>
+                        <div class="character-face w-8 h-8 bg-yellow-400 rounded-full flex flex-col justify-center items-center shadow-sm relative ml-2 group-hover:scale-110 transition-transform">
+                            <div class="flex items-center gap-1">
+                                <div class="eye w-2 h-2.5 bg-white rounded-full relative overflow-hidden">
+                                    <div class="pupil w-1 h-1 bg-slate-800 rounded-full absolute top-[40%] left-[40%]"></div>
+                                </div>
+                                <div class="eye w-2 h-2.5 bg-white rounded-full relative overflow-hidden">
+                                    <div class="pupil w-1 h-1 bg-slate-800 rounded-full absolute top-[40%] left-[40%]"></div>
+                                </div>
                             </div>
-                            <div class="eye w-2 h-2.5 bg-white rounded-full relative overflow-hidden">
-                                <div class="pupil w-1 h-1 bg-slate-800 rounded-full absolute top-[40%] left-[40%]"></div>
-                            </div>
+                            <!-- Mouth -->
+                            <div class="w-3 h-1.5 border-b-2 border-amber-600 rounded-full mt-0.5"></div>
                         </div>
                     </a>
 
@@ -213,13 +217,17 @@
                                     <h1 class="text-2xl font-black text-slate-800 tracking-tight leading-none">to-do</h1>
                                     <span id="mobile-clock" class="text-[9px] font-bold text-slate-400 mt-0.5 tracking-wider"></span>
                                 </div>
-                                <div class="character-face w-6 h-6 bg-yellow-400 rounded-full flex justify-center items-center gap-0.5 shadow-sm relative ml-1 group-hover:scale-110 transition-transform">
-                                    <div class="eye w-1.5 h-2 bg-white rounded-full relative overflow-hidden">
-                                        <div class="pupil w-[3px] h-[3px] bg-slate-800 rounded-full absolute top-[40%] left-[40%]"></div>
+                                <div class="character-face w-6 h-6 bg-yellow-400 rounded-full flex flex-col justify-center items-center shadow-sm relative ml-1 group-hover:scale-110 transition-transform">
+                                    <div class="flex items-center gap-0.5">
+                                        <div class="eye w-1.5 h-2 bg-white rounded-full relative overflow-hidden">
+                                            <div class="pupil w-[3px] h-[3px] bg-slate-800 rounded-full absolute top-[40%] left-[40%]"></div>
+                                        </div>
+                                        <div class="eye w-1.5 h-2 bg-white rounded-full relative overflow-hidden">
+                                            <div class="pupil w-[3px] h-[3px] bg-slate-800 rounded-full absolute top-[40%] left-[40%]"></div>
+                                        </div>
                                     </div>
-                                    <div class="eye w-1.5 h-2 bg-white rounded-full relative overflow-hidden">
-                                        <div class="pupil w-[3px] h-[3px] bg-slate-800 rounded-full absolute top-[40%] left-[40%]"></div>
-                                    </div>
+                                    <!-- Mouth -->
+                                    <div class="w-2 h-1 border-b-[1.5px] border-amber-600 rounded-full mt-0.5"></div>
                                 </div>
                             </a>
                             <a href="/settings" class="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-white hover:text-blue-600 transition-all" title="설정">
@@ -811,12 +819,6 @@
                             </div>
                             
                             <div class="flex-shrink-0 ml-4 flex items-center">
-                                ${(!currentListId || currentListId.startsWith('group_')) && task.list_name ? `
-                                    <span class="mr-2 px-1.5 py-0.5 bg-slate-100/80 text-slate-500 text-[10px] font-bold rounded flex items-center whitespace-nowrap" title="${task.list_name}">
-                                        <i class="fas fa-list-ul mr-1 text-[8px] opacity-60"></i>
-                                        <span>${task.list_name}</span>
-                                    </span>
-                                ` : ''}
                                 ${task.due_date ? `
                                     <button onclick="showDueDateMenu(this, '${task.list_id}', '${task.id}', '${task.due_date}')" class="text-[11px] font-bold px-2 py-1 rounded-lg hover:bg-slate-100 transition-all ${isOverdue ? 'text-rose-500 bg-rose-50/50' : (isToday ? 'text-emerald-600 bg-emerald-50/50' : (isTomorrow ? 'text-blue-600 bg-blue-50/50' : 'text-slate-400'))}">
                                         <i class="far fa-calendar-check mr-1 opacity-60"></i>
@@ -826,6 +828,12 @@
                                         기한 추가
                                     </button>
                                 `}
+                                ${(!currentListId || currentListId.startsWith('group_')) && task.list_name ? `
+                                    <span class="ml-2 px-1.5 py-0.5 bg-slate-100/80 text-slate-500 text-[10px] font-bold rounded hidden md:flex items-center whitespace-nowrap" title="${task.list_name}">
+                                        <i class="fas fa-list-ul mr-1 text-[8px] opacity-60"></i>
+                                        <span>${task.list_name}</span>
+                                    </span>
+                                ` : ''}
                             </div>
                         </div>
                     </div>
