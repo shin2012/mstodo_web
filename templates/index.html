@@ -585,16 +585,23 @@
             const taskList = document.getElementById('task-list');
             const emptyState = document.getElementById('empty-state');
 
+            let loadingTimeout = null;
             if (!silent) {
-                loading.classList.remove('hidden');
-                taskList.classList.add('hidden');
-                emptyState.classList.add('hidden');
+                loadingTimeout = setTimeout(() => {
+                    loading.classList.remove('hidden');
+                    taskList.classList.add('hidden');
+                    emptyState.classList.add('hidden');
+                }, 50); // Delay spinner for 50ms (faster than flicker)
             }
 
             try {
                 const url = `/api/tasks${currentListId ? '?list_id=' + currentListId : ''}`;
                 const response = await fetch(url);
                 cachedTasks = await response.json();
+                
+                if (loadingTimeout) clearTimeout(loadingTimeout);
+                loading.classList.add('hidden');
+
                 if (cachedTasks.length === 0) {
                     taskList.classList.add('hidden');
                     emptyState.classList.remove('hidden');
@@ -603,7 +610,10 @@
                     taskList.classList.remove('hidden');
                     emptyState.classList.add('hidden');
                 }
-            } catch (err) { console.error(err); } 
+            } catch (err) { 
+                if (loadingTimeout) clearTimeout(loadingTimeout);
+                console.error(err); 
+            } 
             finally {
                 loading.classList.add('hidden');
             }
