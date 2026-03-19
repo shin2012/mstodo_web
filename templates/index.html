@@ -248,7 +248,7 @@
                         </div>
                         <div class="flex flex-col flex-grow">
                             <h1 class="text-2xl font-black text-slate-800 tracking-tight leading-none">to-do list</h1>
-                            <span id="desktop-clock" class="text-[10px] font-bold text-slate-400 mt-1 tracking-wider"></span>
+                            <span id="desktop-clock" class="text-[10px] font-semibold text-slate-400 mt-1 tracking-wider"></span>
                         </div>
                         <div class="character-face w-8 h-8 bg-yellow-400 rounded-full flex flex-col justify-center items-center shadow-sm relative ml-2 group-hover:scale-110 transition-transform">
                             <div class="flex items-center gap-1">
@@ -266,10 +266,10 @@
 
                     <!-- Special Menu: All Tasks -->
                     <div class="px-2 mb-4">
-                        <button onclick="selectList(null)" id="all-tasks-btn" class="w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all font-bold text-[14px] bg-white shadow-sm border border-slate-200 text-blue-600">
-                            <i class="fas fa-list-ul opacity-70"></i>
+                        <div onclick="selectList(null)" id="all-tasks-btn" class="sidebar-item group flex items-center px-4 py-2.5 text-slate-500 font-bold hover:bg-white/60 transition-all text-[14px]">
+                            <i class="fas fa-list-ul mr-3 opacity-40 group-[.active]:opacity-100 text-sm"></i>
                             <span>모든 할 일</span>
-                        </button>
+                        </div>
                     </div>
 
                     <nav class="space-y-1 overflow-y-auto no-scrollbar flex-grow" id="sidebar-list">
@@ -312,7 +312,7 @@
                                 </div>
                                 <div class="flex flex-col">
                                     <h1 class="text-2xl font-black text-slate-800 tracking-tight leading-none">to-do list</h1>
-                                    <span id="mobile-clock" class="text-[9px] font-bold text-slate-400 mt-0.5 tracking-wider"></span>
+                                    <span id="mobile-clock" class="text-[9px] font-semibold text-slate-400 mt-0.5 tracking-wider"></span>
                                 </div>
                                 <div class="character-face w-6 h-6 bg-yellow-400 rounded-full flex flex-col justify-center items-center shadow-sm relative ml-1 group-hover:scale-110 transition-transform">
                                     <div class="flex items-center gap-0.5">
@@ -704,12 +704,10 @@
             const allBtn = document.getElementById('all-tasks-btn');
             const allChip = document.getElementById('all-tasks-chip');
             if (id === null) {
-                if (allBtn) allBtn.classList.replace('bg-white', 'bg-blue-50');
-                if (allBtn) allBtn.classList.replace('text-blue-600', 'text-blue-700');
+                if (allBtn) allBtn.classList.add('active');
                 if (allChip) allChip.classList.add('active');
             } else {
-                if (allBtn) allBtn.classList.replace('bg-blue-50', 'bg-white');
-                if (allBtn) allBtn.classList.replace('text-blue-700', 'text-blue-600');
+                if (allBtn) allBtn.classList.remove('active');
                 if (allChip) allChip.classList.remove('active');
             }
 
@@ -831,25 +829,71 @@
         function renderTasks(tasks) {
             const container = document.getElementById('task-list');
             container.innerHTML = '';
+            
+            const activeTasks = tasks.filter(t => t.status !== 'completed');
+            const completedTasks = tasks.filter(t => t.status === 'completed');
+            
+            // Sort completed tasks by completed_date_time DESC
+            completedTasks.sort((a, b) => {
+                const aTime = a.completed_date_time || '';
+                const bTime = b.completed_date_time || '';
+                return bTime.localeCompare(aTime);
+            });
+
             const now = new Date();
             const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
             const tomorrow = new Date(today);
             tomorrow.setDate(today.getDate() + 1);
-
             const yesterday = new Date(today);
             yesterday.setDate(today.getDate() - 1);
-
             const endOfWeek = new Date(today);
             const diff = 7 - (today.getDay() === 0 ? 7 : today.getDay());
             endOfWeek.setDate(today.getDate() + diff);
             endOfWeek.setHours(23, 59, 59, 999);
 
-            tasks.forEach(task => {
+            activeTasks.forEach(task => {
+                container.appendChild(createTaskCard(task, today, tomorrow, yesterday, endOfWeek));
+            });
+
+            // Show completed tasks only for individual lists
+            if (completedTasks.length > 0 && currentListId && !currentListId.startsWith('group_')) {
+                const hr = document.createElement('div');
+                hr.className = 'my-8 border-t border-slate-200/50';
+                container.appendChild(hr);
+
+                const isCollapsed = localStorage.getItem(`completedCollapsed_${currentListId}`) === 'true';
+
+                const header = document.createElement('div');
+                header.className = 'flex items-center space-x-2 mb-4 px-2 cursor-pointer group/comp';
+                header.onclick = () => {
+                    const content = document.getElementById('completed-tasks-container');
+                    const icon = document.getElementById('completed-toggle-icon');
+                    const currentlyHidden = content.classList.toggle('hidden');
+                    icon.classList.toggle('-rotate-90', currentlyHidden);
+                    localStorage.setItem(`completedCollapsed_${currentListId}`, currentlyHidden);
+                };
+                header.innerHTML = `
+                    <i id="completed-toggle-icon" class="fas fa-chevron-down text-[10px] text-slate-400 transition-transform ${isCollapsed ? '-rotate-90' : ''}"></i>
+                    <span class="text-[13px] font-bold text-slate-500">완료됨 (${completedTasks.length})</span>
+                `;
+                container.appendChild(header);
+
+                const completedContainer = document.createElement('div');
+                completedContainer.id = 'completed-tasks-container';
+                completedContainer.className = `space-y-3 ${isCollapsed ? 'hidden' : ''}`;
+                completedTasks.forEach(task => {
+                    completedContainer.appendChild(createTaskCard(task, today, tomorrow, yesterday, endOfWeek));
+                });
+                container.appendChild(completedContainer);
+            }
+        }
+
+        function createTaskCard(task, today, tomorrow, yesterday, endOfWeek) {
                 const card = document.createElement('div');
                 card.id = `task-${task.id}`;
 
                 const isImportant = task.importance === 'high';
+                const isCompleted = task.status === 'completed';
                 const dueDate = parseDate(task.due_date);
 
                 const isToday = dueDate && dueDate.getTime() === today.getTime();
@@ -857,11 +901,15 @@
                 const isYesterday = dueDate && dueDate.getTime() === yesterday.getTime();
                 const isOverdue = dueDate && dueDate.getTime() < today.getTime();
                 const isThisWeek = dueDate && !isToday && !isTomorrow && !isYesterday && !isOverdue && dueDate <= endOfWeek;
+                
                 let borderColor = 'border-slate-100';
                 let bgColor = 'bg-white';
                 let borderSize = 'border';
                 
-                if (isImportant) {
+                if (isCompleted) {
+                    borderColor = 'border-slate-100';
+                    bgColor = 'bg-slate-50/50';
+                } else if (isImportant) {
                     borderColor = 'border-amber-400';
                     bgColor = 'bg-amber-50/30';
                     borderSize = 'border-2';
@@ -882,7 +930,7 @@
                     bgColor = 'bg-sky-50/5';
                 }
 
-                card.className = `group task-card ${bgColor} px-4 py-3 rounded-2xl ${borderSize} ${borderColor} flex flex-col transition-all`;
+                card.className = `group task-card ${bgColor} px-4 py-3 rounded-2xl ${borderSize} ${borderColor} flex flex-col transition-all ${isCompleted ? 'opacity-60' : ''}`;
                 
                 let subtasksHtml = '';
                 if (task.subtasks && task.subtasks.length > 0) {
@@ -891,10 +939,11 @@
                             ${task.subtasks.map(st => `
                                 <div class="flex items-center space-x-3 group/sub">
                                     <input type="checkbox" ${st.isChecked ? 'checked' : ''} 
+                                           ${isCompleted ? 'disabled' : ''}
                                            onchange="toggleSubtask('${task.list_id}', '${task.id}', '${st.id}', this.checked, this)"
                                            class="w-3.5 h-3.5 rounded border-slate-400/60 text-blue-600 focus:ring-blue-500/30 cursor-pointer bg-white/50 hover:border-blue-500">
                                     <span class="text-[12.5px] ${st.isChecked ? 'line-through text-slate-400 font-medium' : 'text-slate-600 font-semibold'} transition-all outline-none"
-                                          contenteditable="true"
+                                          ${isCompleted ? '' : 'contenteditable="true"'}
                                           onblur="updateSubtaskTitle('${task.list_id}', '${task.id}', '${st.id}', this)"
                                           onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }">
                                         ${st.displayName}
@@ -909,20 +958,21 @@
                     <div class="flex items-center">
                         <div class="flex-shrink-0 mr-4">
                             <div class="relative w-5 h-5">
-                                <input type="checkbox" onchange="completeTask('${task.list_id}', '${task.id}')"
+                                <input type="checkbox" ${isCompleted ? 'checked' : ''} onchange="completeTask('${task.list_id}', '${task.id}')"
                                        class="peer appearance-none w-5 h-5 rounded-full border-2 border-slate-400/50 hover:border-blue-500 checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer shadow-sm bg-white/50">
                                 <i class="fas fa-check absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[9px] text-white opacity-0 peer-checked:opacity-100 pointer-events-none"></i>
                             </div>
                         </div>
                         <div class="flex-grow min-w-0 flex items-center justify-between">
                             <div class="flex items-center space-x-2 min-w-0">
-                                <h3 class="text-[14.5px] font-bold text-slate-700 group-hover:text-blue-900 transition-colors outline-none truncate"
-                                    contenteditable="true"
+                                <h3 class="text-[14.5px] font-bold text-slate-700 group-hover:text-blue-900 transition-colors outline-none truncate ${isCompleted ? 'line-through text-slate-400' : ''}"
+                                    ${isCompleted ? '' : 'contenteditable="true"'}
                                     onblur="updateTaskTitle('${task.list_id}', '${task.id}', this)"
                                     onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }">
                                     ${task.title}
                                 </h3>
                                 <button onclick="toggleImportance('${task.list_id}', '${task.id}', '${task.importance}')" 
+                                        ${isCompleted ? 'disabled' : ''}
                                         class="star-btn flex-shrink-0 focus:outline-none transition-all">
                                     ${isImportant ? 
                                         '<i class="fas fa-star text-amber-500 text-sm"></i>' : 
@@ -932,13 +982,14 @@
                             
                             <div class="flex-shrink-0 ml-4 flex items-center">
                                 ${task.due_date ? `
-                                    <button onclick="showDueDateMenu(this, '${task.list_id}', '${task.id}', '${task.due_date}')" class="text-[11px] font-bold px-2 py-1 rounded-lg hover:bg-slate-100 transition-all ${isOverdue ? 'text-rose-500 bg-rose-50/50' : (isToday ? 'text-emerald-600 bg-emerald-50/50' : (isTomorrow ? 'text-blue-600 bg-blue-50/50' : 'text-slate-400'))}">
+                                    <button onclick="${isCompleted ? '' : `showDueDateMenu(this, '${task.list_id}', '${task.id}', '${task.due_date}')`}" class="text-[11px] font-semibold px-2 py-1 rounded-lg hover:bg-slate-100 transition-all ${isOverdue ? 'text-rose-500 bg-rose-50/50' : (isToday ? 'text-emerald-600 bg-emerald-50/50' : (isTomorrow ? 'text-blue-600 bg-blue-50/50' : 'text-slate-400'))}">
                                         <i class="far fa-calendar-check mr-1 opacity-60"></i>
                                         ${formatDate(task.due_date)}
                                     </button>` : `
+                                    ${isCompleted ? '' : `
                                     <button onclick="showDueDateMenu(this, '${task.list_id}', '${task.id}')" class="due-date-btn text-[10px] font-black uppercase tracking-tighter text-slate-300 hover:text-blue-500 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100 transition-all">
                                         기한 추가
-                                    </button>
+                                    </button>`}
                                 `}
                                 ${(!currentListId || currentListId.startsWith('group_')) && task.list_name ? `
                                     <span class="ml-2 px-1.5 py-0.5 bg-slate-100/80 text-slate-500 text-[10px] font-bold rounded hidden md:flex items-center whitespace-nowrap" title="${task.list_name}">
@@ -951,8 +1002,7 @@
                     </div>
                     ${subtasksHtml}
                 `;
-                container.appendChild(card);
-            });
+                return card;
         }
 
         async function setDueDate(listId, taskId, date) {
@@ -1045,14 +1095,30 @@
 
         async function completeTask(listId, taskId) {
             const card = document.getElementById(`task-${taskId}`);
-            card.classList.add('completed');
+            const isCurrentlyCompleted = card.classList.contains('opacity-60');
+            
+            if (!isCurrentlyCompleted) {
+                card.classList.add('completed', 'fade-out');
+            } else {
+                card.classList.remove('opacity-60');
+            }
+
             try {
-                const resp = await fetch(`/api/complete/${listId}/${taskId}`, { method: 'POST' });
+                const resp = await fetch(`/api/complete/${listId}/${taskId}`, { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
                 if (resp.ok) {
-                    card.classList.add('fade-out');
-                    setTimeout(() => card.remove(), 400);
+                    if (!isCurrentlyCompleted) {
+                        setTimeout(() => fetchTasks(true), 400);
+                    } else {
+                        fetchTasks(true);
+                    }
                 } else { throw new Error('Fail'); }
-            } catch (err) { card.classList.remove('completed'); card.querySelector('input').checked = false; }
+            } catch (err) { 
+                fetchTasks(true);
+            }
         }
 
         async function updateTaskTitle(listId, taskId, element) {

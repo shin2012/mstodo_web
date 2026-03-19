@@ -33,6 +33,7 @@ def init_db():
             status TEXT,
             importance TEXT,
             due_date TEXT,
+            completed_date_time TEXT,
             created_date_time TEXT,
             last_modified_date_time TEXT,
             checklist_items TEXT,
@@ -40,6 +41,12 @@ def init_db():
         )
     ''')
     
+    # Check if completed_date_time column exists, if not add it
+    c.execute("PRAGMA table_info(tasks)")
+    columns = [column[1] for column in c.fetchall()]
+    if 'completed_date_time' not in columns:
+        c.execute('ALTER TABLE tasks ADD COLUMN completed_date_time TEXT')
+
     # Sync tokens table
     c.execute('''
         CREATE TABLE IF NOT EXISTS sync_tokens (
@@ -108,18 +115,23 @@ def upsert_tasks(list_id, tasks_data):
                     due_date_str = dt.strftime('%Y-%m-%d')
                 except Exception as e:
                     due_date_str = dt_str[:10]
+            
+            completed_dt_str = None
+            if task.get('completedDateTime'):
+                completed_dt_str = task['completedDateTime'].get('dateTime')
                 
             checklist_json = json.dumps(task.get('checklistItems', []))
             
             c.execute('''
-                INSERT INTO tasks (id, list_id, title, status, importance, due_date, created_date_time, last_modified_date_time, checklist_items, is_deleted)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
+                INSERT INTO tasks (id, list_id, title, status, importance, due_date, completed_date_time, created_date_time, last_modified_date_time, checklist_items, is_deleted)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)
                 ON CONFLICT(id) DO UPDATE SET
                     list_id=excluded.list_id,
                     title=excluded.title,
                     status=excluded.status,
                     importance=excluded.importance,
                     due_date=excluded.due_date,
+                    completed_date_time=excluded.completed_date_time,
                     created_date_time=excluded.created_date_time,
                     last_modified_date_time=excluded.last_modified_date_time,
                     checklist_items=excluded.checklist_items,
@@ -131,6 +143,7 @@ def upsert_tasks(list_id, tasks_data):
                 task.get('status', 'notStarted'),
                 task.get('importance', 'normal'),
                 due_date_str,
+                completed_dt_str,
                 task.get('createdDateTime', ''),
                 task.get('lastModifiedDateTime', ''),
                 checklist_json
@@ -138,21 +151,23 @@ def upsert_tasks(list_id, tasks_data):
     conn.commit()
     conn.close()
 
-def get_active_tasks(list_id=None, list_ids=None):
+def get_tasks(list_id=None, list_ids=None, include_completed=False):
     conn = get_db()
     c = conn.cursor()
-    
+
+    status_filter = 'AND status != "completed"' if not include_completed else ''
+
     if list_ids:
         placeholders = ','.join(['?'] * len(list_ids))
-        c.execute(f'SELECT * FROM tasks WHERE list_id IN ({placeholders}) AND is_deleted = 0 AND status != "completed"', list_ids)
+        c.execute(f'SELECT * FROM tasks WHERE list_id IN ({placeholders}) AND is_deleted = 0 {status_filter}', list_ids)
     elif list_id:
-        c.execute('SELECT * FROM tasks WHERE list_id = ? AND is_deleted = 0 AND status != "completed"', (list_id,))
+        c.execute(f'SELECT * FROM tasks WHERE list_id = ? AND is_deleted = 0 {status_filter}', (list_id,))
     else:
-        c.execute('SELECT * FROM tasks WHERE is_deleted = 0 AND status != "completed"')
-        
+        c.execute(f'SELECT * FROM tasks WHERE is_deleted = 0 {status_filter}')
+
     rows = c.fetchall()
     conn.close()
-    
+
     tasks = []
     for row in rows:
         t = dict(row)
@@ -160,12 +175,18 @@ def get_active_tasks(list_id=None, list_ids=None):
         tasks.append(t)
     return tasks
 
+
 def update_task_status_local(task_id, status):
     conn = get_db()
     c = conn.cursor()
-    c.execute('UPDATE tasks SET status = ? WHERE id = ?', (status, task_id))
+    if status == 'completed':
+        now_str = datetime.utcnow().isoformat() + 'Z'
+        c.execute('UPDATE tasks SET status = ?, completed_date_time = ? WHERE id = ?', (status, now_str, task_id))
+    else:
+        c.execute('UPDATE tasks SET status = ?, completed_date_time = NULL WHERE id = ?', (status, task_id))
     conn.commit()
     conn.close()
+
 
 def delete_task_by_id(task_id):
     conn = get_db()

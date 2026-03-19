@@ -187,16 +187,19 @@ def get_lists():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/tasks')
-def get_tasks():
+def get_tasks_api():
     token_data = get_refreshed_token()
     if not token_data: return jsonify({"error": "Not authenticated"}), 401
 
     list_id_param = request.args.get('list_id')
     list_ids_param = request.args.get('list_ids')
+    
+    # Only individual list view (not All Tasks or Group) should include completed tasks
+    is_individual_list = list_id_param and not list_id_param.startswith('group_')
 
     try:
         list_ids = list_ids_param.split(',') if list_ids_param else None
-        tasks = database.get_active_tasks(list_id=list_id_param, list_ids=list_ids)
+        tasks = database.get_tasks(list_id=list_id_param, list_ids=list_ids, include_completed=is_individual_list)
 
         # Add list_name to tasks for UI
         active_lists = {lst['id']: lst['name'] for lst in database.get_active_lists()}
@@ -383,6 +386,16 @@ def complete_task(list_id, task_id):
     token_data = get_refreshed_token()
     if not token_data: return jsonify({"error": "Not authenticated"}), 401
     
+    data = request.json or {}
+    # If target status is provided, use it; otherwise toggle.
+    target_status = data.get('status')
+    
+    if not target_status:
+        # Get current status to toggle
+        task = database.get_task_by_id(task_id)
+        if not task: return jsonify({"error": "Task not found"}), 404
+        target_status = "notStarted" if task['status'] == "completed" else "completed"
+
     try:
         access_token = token_data.get('access_token')
         headers = {
@@ -390,10 +403,10 @@ def complete_task(list_id, task_id):
             "Content-Type": "application/json"
         }
         url = f"https://graph.microsoft.com/v1.0/me/todo/lists/{list_id}/tasks/{task_id}"
-        resp = requests.patch(url, json={"status": "completed"}, headers=headers)
+        resp = requests.patch(url, json={"status": target_status}, headers=headers)
         if resp.status_code in [200, 204]:
-            database.update_task_status_local(task_id, "completed")
-            return jsonify({"success": True})
+            database.update_task_status_local(task_id, target_status)
+            return jsonify({"success": True, "new_status": target_status})
         else:
             return jsonify({"error": resp.text}), resp.status_code
     except Exception as e:
