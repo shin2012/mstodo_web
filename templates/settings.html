@@ -76,7 +76,43 @@
             </div>
         </div>
 
-        <!-- 2. API 상세 설정 -->
+        <!-- 2. UI 커스터마이징 -->
+        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden mb-8">
+            <div class="p-8">
+                <div class="flex items-center space-x-3 mb-8">
+                    <div class="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-500">
+                        <i class="fas fa-magic text-lg"></i>
+                    </div>
+                    <h2 class="text-lg font-bold text-slate-800">화면 스타일 설정</h2>
+                </div>
+
+                <div class="space-y-6">
+                    <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-700">배경 애니메이션</h3>
+                            <p class="text-[11px] text-slate-500 font-medium">배경의 움직이는 블롭 효과를 활성화합니다.</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="toggle-bg-animate" class="sr-only peer" checked>
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                        </label>
+                    </div>
+
+                    <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div>
+                            <h3 class="text-sm font-bold text-slate-700">실시간 날씨 효과</h3>
+                            <p class="text-[11px] text-slate-500 font-medium">서울의 실시간 날씨에 맞춰 눈, 비 등의 효과를 표시합니다.</p>
+                        </div>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="toggle-weather-effect" class="sr-only peer" checked>
+                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. API 상세 설정 -->
         <details class="group bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
             <summary class="list-none p-8 cursor-pointer flex items-center justify-between hover:bg-slate-50 transition-colors">
                 <div class="flex items-center space-x-3">
@@ -138,5 +174,28 @@
             </p>
         </div>
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const bgToggle = document.getElementById('toggle-bg-animate');
+            const weatherToggle = document.getElementById('toggle-weather-effect');
+
+            // Load saved settings
+            const bgAnimate = localStorage.getItem('bgAnimate') !== 'false';
+            const weatherEffect = localStorage.getItem('weatherEffect') !== 'false';
+
+            bgToggle.checked = bgAnimate;
+            weatherToggle.checked = weatherEffect;
+
+            // Save settings on change
+            bgToggle.addEventListener('change', (e) => {
+                localStorage.setItem('bgAnimate', e.target.checked);
+            });
+
+            weatherToggle.addEventListener('change', (e) => {
+                localStorage.setItem('weatherEffect', e.target.checked);
+            });
+        });
+    </script>
 </body>
 </html>

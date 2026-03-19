@@ -1,16 +1,15 @@
 {
   "groups": [
     {
-      "name": "한국조폐공사",
       "collapsed": false,
       "lists": [
         "AQMkADAwATM0MDAAMS05OQA4NS00NmRiLTAwAi0wMAoALgAAAy0lHcvXYuJLnEihuBUBVsIBAKL8k-tF3XtOpG4BKTgJX_oACUdbwFsAAAA=",
         "AQMkADAwATM0MDAAMS05OQA4NS00NmRiLTAwAi0wMAoALgAAAy0lHcvXYuJLnEihuBUBVsIBAKL8k-tF3XtOpG4BKTgJX_oAA6pWEMIAAAA=",
         "AQMkADAwATM0MDAAMS05OQA4NS00NmRiLTAwAi0wMAoALgAAAy0lHcvXYuJLnEihuBUBVsIBAKL8k-tF3XtOpG4BKTgJX_oAB0yDgsMAAAA="
-      ]
+      ],
+      "name": "한국조폐공사"
     },
     {
-      "name": "신요섭",
       "collapsed": true,
       "lists": [
         "AQMkADAwATM0MDAAMS05OQA4NS00NmRiLTAwAi0wMAoALgAAAy0lHcvXYuJLnEihuBUBVsIBAKL8k-tF3XtOpG4BKTgJX_oAA6pWENAAAAA=",
@@ -18,10 +17,10 @@
         "AQMkADAwATM0MDAAMS05OQA4NS00NmRiLTAwAi0wMAoALgAAAy0lHcvXYuJLnEihuBUBVsIBAKL8k-tF3XtOpG4BKTgJX_oAA6pWEMUAAAA=",
         "AQMkADAwATM0MDAAMS05OQA4NS00NmRiLTAwAi0wMAoALgAAAy0lHcvXYuJLnEihuBUBVsIBAKL8k-tF3XtOpG4BKTgJX_oAA6pWEMEAAAA=",
         "AQMkADAwATM0MDAAMS05OQA4NS00NmRiLTAwAi0wMAoALgAAAy0lHcvXYuJLnEihuBUBVsIBAKL8k-tF3XtOpG4BKTgJX_oABIjJ2k8AAAA="
-      ]
+      ],
+      "name": "신요섭"
     },
     {
-      "name": "아카이브",
       "collapsed": true,
       "lists": [
         "AQMkADAwATM0MDAAMS05OQA4NS00NmRiLTAwAi0wMAoALgAAAy0lHcvXYuJLnEihuBUBVsIBAKL8k-tF3XtOpG4BKTgJX_oAA6pWEM4AAAA=",
@@ -34,16 +33,17 @@
         "AQMkADAwATM0MDAAMS05OQA4NS00NmRiLTAwAi0wMAoALgAAAy0lHcvXYuJLnEihuBUBVsIBAKL8k-tF3XtOpG4BKTgJX_oAA6pWEM8AAAA=",
         "AQMkADAwATM0MDAAMS05OQA4NS00NmRiLTAwAi0wMAoALgAAAy0lHcvXYuJLnEihuBUBVsIBAKL8k-tF3XtOpG4BKTgJX_oAA6pWEM0AAAA=",
         "AQMkADAwATM0MDAAMS05OQA4NS00NmRiLTAwAi0wMAoALgAAAy0lHcvXYuJLnEihuBUBVsIBAKL8k-tF3XtOpG4BKTgJX_oABh-7m5AAAAA="
-      ]
+      ],
+      "name": "아카이브"
     },
     {
-      "name": "기타 목록",
       "collapsed": true,
       "lists": [
         "AQMkADAwATM0MDAAMS05OQA4NS00NmRiLTAwAi0wMAoALgAAAy0lHcvXYuJLnEihuBUBVsIBAKL8k-tF3XtOpG4BKTgJX_oAA6pWEMgAAAA=",
         "AQMkADAwATM0MDAAMS05OQA4NS00NmRiLTAwAi0wMAoALgAAAy0lHcvXYuJLnEihuBUBVsIBAKL8k-tF3XtOpG4BKTgJX_oAAAIBEgAAAA==",
         "AQMkADAwATM0MDAAMS05OQA4NS00NmRiLTAwAi0wMAoALgAAAy0lHcvXYuJLnEihuBUBVsIBAKL8k-tF3XtOpG4BKTgJX_oAA6pWENEAAAA="
-      ]
+      ],
+      "name": "기타 목록"
     }
   ]
 }

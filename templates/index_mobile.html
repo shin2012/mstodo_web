@@ -25,6 +25,10 @@
             z-index: -1;
             background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
             overflow: hidden;
+            transition: opacity 1s ease;
+        }
+        .bg-animate.hidden-blobs .blob {
+            display: none;
         }
         .blob {
             position: absolute;
@@ -49,6 +53,93 @@
         @keyframes move {
             0% { transform: translate(-10%, -10%) rotate(0deg) scale(1); }
             100% { transform: translate(15%, 15%) rotate(90deg) scale(1.1); }
+        }
+
+        /* Weather Effects */
+        #weather-layer {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: -1;
+            pointer-events: none;
+            overflow: hidden;
+        }
+        .rain {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.4);
+            width: 1.5px; height: 15px; top: -20px;
+            animation: fall linear infinite;
+        }
+        .snow {
+            position: absolute;
+            background: white;
+            border-radius: 50%; top: -10px;
+            animation: fall linear infinite;
+        }
+        @keyframes fall {
+            to { transform: translateY(100vh); }
+        }
+
+        /* Sun glare for Clear weather */
+        .sun-glare {
+            position: absolute;
+            top: -10%; right: -10%; width: 60%; height: 60%;
+            background: radial-gradient(circle, rgba(255, 253, 230, 0.15) 0%, rgba(255, 253, 230, 0) 70%);
+            filter: blur(40px);
+            z-index: -1;
+            opacity: 0; transition: opacity 2s ease;
+        }
+        .sun-glare.active { opacity: 1; animation: pulse-glare 10s infinite alternate ease-in-out; }
+        @keyframes pulse-glare {
+            0% { transform: scale(1); opacity: 0.1; }
+            100% { transform: scale(1.2); opacity: 0.2; }
+        }
+
+        /* Sparkles for Clear weather */
+        .sparkle {
+            position: absolute;
+            background: white; border-radius: 50%;
+            opacity: 0; animation: sparkle-anim 4s infinite linear;
+        }
+        @keyframes sparkle-anim {
+            0%, 100% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1); opacity: 0.3; }
+        }
+
+        .cloud-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(148, 163, 184, 0.1);
+            backdrop-filter: blur(2px);
+            opacity: 0; transition: opacity 2s ease;
+        }
+        .cloud-overlay.active { opacity: 1; }
+        .cloud-overlay.heavy { background: rgba(100, 116, 139, 0.2); backdrop-filter: blur(5px); }
+
+        /* Mist/Fog */
+        .mist-overlay {
+            position: absolute;
+            bottom: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to top, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 100%);
+            opacity: 0; transition: opacity 3s ease;
+            backdrop-filter: blur(8px);
+        }
+        .mist-overlay.active { opacity: 1; }
+
+        /* Thunder Flash */
+        .thunder-flash {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: white;
+            opacity: 0;
+            z-index: 10;
+        }
+        .flash-active { animation: flash-anim 0.5s ease-out; }
+        @keyframes flash-anim {
+            0% { opacity: 0; }
+            10% { opacity: 0.3; }
+            20% { opacity: 0; }
+            25% { opacity: 0.4; }
+            100% { opacity: 0; }
         }
 
         /* Compact Layout */
@@ -137,6 +228,12 @@
         <div class="blob"></div>
         <div class="blob blob-2"></div>
         <div class="blob blob-3"></div>
+    </div>
+    <div id="weather-layer">
+        <div class="sun-glare"></div>
+        <div class="cloud-overlay"></div>
+        <div class="mist-overlay"></div>
+        <div class="thunder-flash"></div>
     </div>
 
     <div class="max-w-6xl mx-auto relative">
@@ -596,7 +693,7 @@
                 let borderSize = 'border';
                 
                 if (isImportant) {
-                    borderColor = 'border-amber-400 shadow-md shadow-amber-50';
+                    borderColor = 'border-amber-400';
                     bgColor = 'bg-amber-50/30';
                     borderSize = 'border-2';
                 } else if (isOverdue) {
@@ -830,6 +927,15 @@
         }
 
         function initBackgroundBySun() {
+            // Check background animation setting
+            const bgAnimate = localStorage.getItem('bgAnimate') !== 'false';
+            const bgContainer = document.querySelector('.bg-animate');
+            if (!bgAnimate) {
+                bgContainer.classList.add('hidden-blobs');
+            } else {
+                bgContainer.classList.remove('hidden-blobs');
+            }
+
             const lat = 37.5665, lng = 126.9780;
             fetch(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&formatted=0`)
                 .then(res => res.json())
@@ -875,6 +981,104 @@
                 .catch(err => console.error('Failed to fetch sun times', err));
         }
 
+        async function initWeatherEffect() {
+            const weatherEffect = localStorage.getItem('weatherEffect') !== 'false';
+            const layer = document.getElementById('weather-layer');
+            const sunGlare = layer.querySelector('.sun-glare');
+            const cloudOverlay = layer.querySelector('.cloud-overlay');
+            const mistOverlay = layer.querySelector('.mist-overlay');
+            
+            // Clear existing particles
+            layer.querySelectorAll('.rain, .snow, .sparkle').forEach(el => el.remove());
+            sunGlare.classList.remove('active');
+            cloudOverlay.classList.remove('active', 'heavy');
+            mistOverlay.classList.remove('active');
+            if (window.thunderInterval) clearInterval(window.thunderInterval);
+
+            if (!weatherEffect) return;
+
+            try {
+                const resp = await fetch('https://wttr.in/Seoul?format=j1');
+                const data = await resp.json();
+                const condition = data.current_condition[0];
+                const code = parseInt(condition.weatherCode);
+                
+                // Weather Code Groups (WWO)
+                const clearCodes = [113];
+                const partlyCloudyCodes = [116];
+                const cloudyCodes = [119, 122];
+                const mistCodes = [143, 248, 260];
+                const rainCodes = [176, 263, 266, 293, 296, 299, 302, 305, 308, 353, 356, 359];
+                const snowCodes = [179, 227, 230, 323, 326, 329, 332, 335, 338, 368, 371, 392, 395];
+                const thunderCodes = [200, 386, 389];
+
+                if (thunderCodes.includes(code)) {
+                    createParticles('rain', 35);
+                    cloudOverlay.classList.add('active', 'heavy');
+                    initThunder();
+                } else if (rainCodes.includes(code)) {
+                    createParticles('rain', 30);
+                    cloudOverlay.classList.add('active', 'heavy');
+                } else if (snowCodes.includes(code)) {
+                    createParticles('snow', 20);
+                    cloudOverlay.classList.add('active', 'heavy');
+                } else if (mistCodes.includes(code)) {
+                    mistOverlay.classList.add('active');
+                } else if (cloudyCodes.includes(code)) {
+                    cloudOverlay.classList.add('active', 'heavy');
+                } else if (partlyCloudyCodes.includes(code)) {
+                    cloudOverlay.classList.add('active');
+                } else if (clearCodes.includes(code)) {
+                    sunGlare.classList.add('active');
+                    createSparkles(10);
+                }
+            } catch (err) {
+                console.error('Weather fetch failed', err);
+            }
+        }
+
+        function createSparkles(count) {
+            const layer = document.getElementById('weather-layer');
+            for (let i = 0; i < count; i++) {
+                const s = document.createElement('div');
+                s.className = 'sparkle';
+                const size = Math.random() * 2 + 1 + 'px';
+                s.style.width = size; s.style.height = size;
+                s.style.left = Math.random() * 100 + 'vw';
+                s.style.top = Math.random() * 100 + 'vh';
+                s.style.animationDelay = Math.random() * 5 + 's';
+                layer.appendChild(s);
+            }
+        }
+
+        function initThunder() {
+            const flash = document.querySelector('.thunder-flash');
+            window.thunderInterval = setInterval(() => {
+                if (Math.random() > 0.85) {
+                    flash.classList.add('flash-active');
+                    setTimeout(() => flash.classList.remove('flash-active'), 500);
+                }
+            }, 6000);
+        }
+
+        function createParticles(type, count) {
+            const layer = document.getElementById('weather-layer');
+            for (let i = 0; i < count; i++) {
+                const p = document.createElement('div');
+                p.className = type;
+                p.style.left = Math.random() * 100 + 'vw';
+                p.style.animationDuration = (Math.random() * 1 + (type === 'rain' ? 0.5 : 2)) + 's';
+                p.style.animationDelay = Math.random() * 2 + 's';
+                if (type === 'snow') {
+                    const size = Math.random() * 3 + 2 + 'px';
+                    p.style.width = size;
+                    p.style.height = size;
+                    p.style.opacity = Math.random() * 0.5 + 0.3;
+                }
+                layer.appendChild(p);
+            }
+        }
+
         function initEyeTracking() {
             document.addEventListener('mousemove', (e) => {
                 const mouseX = e.clientX;
@@ -904,8 +1108,10 @@
             fetchLists();
             initClock();
             initBackgroundBySun();
+            initWeatherEffect();
             initEyeTracking();
             setInterval(initBackgroundBySun, 10 * 60 * 1000);
+            setInterval(initWeatherEffect, 30 * 60 * 1000);
         });    
         function toggleDrawer() {
             const drawer = document.getElementById('mobile-drawer');
