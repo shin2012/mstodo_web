@@ -664,10 +664,10 @@
             const activeTasks = tasks.filter(t => t.status !== 'completed');
             const completedTasks = tasks.filter(t => t.status === 'completed');
             
-            // Sort completed tasks by completed_date_time DESC
+            // Sort completed tasks by completed_date_time DESC (with fallbacks)
             completedTasks.sort((a, b) => {
-                const aTime = a.completed_date_time || '';
-                const bTime = b.completed_date_time || '';
+                const aTime = a.completed_date_time || a.last_modified_date_time || a.created_date_time || '';
+                const bTime = b.completed_date_time || b.last_modified_date_time || b.created_date_time || '';
                 return bTime.localeCompare(aTime);
             });
 
@@ -906,14 +906,30 @@
 
         async function completeTask(listId, taskId) {
             const card = document.getElementById(`task-${taskId}`);
-            card.classList.add('completed');
+            const isCurrentlyCompleted = card.classList.contains('opacity-60');
+            
+            if (!isCurrentlyCompleted) {
+                card.classList.add('completed', 'fade-out');
+            } else {
+                card.classList.remove('opacity-60');
+            }
+
             try {
-                const resp = await fetch(`/api/complete/${listId}/${taskId}`, { method: 'POST' });
+                const resp = await fetch(`/api/complete/${listId}/${taskId}`, { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
                 if (resp.ok) {
-                    card.classList.add('fade-out');
-                    setTimeout(() => card.remove(), 400);
+                    if (!isCurrentlyCompleted) {
+                        setTimeout(() => fetchTasks(true), 400);
+                    } else {
+                        fetchTasks(true);
+                    }
                 } else { throw new Error('Fail'); }
-            } catch (err) { card.classList.remove('completed'); card.querySelector('input').checked = false; }
+            } catch (err) { 
+                fetchTasks(true);
+            }
         }
 
         async function updateTaskTitle(listId, taskId, element) {

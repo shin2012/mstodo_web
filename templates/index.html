@@ -833,10 +833,10 @@
             const activeTasks = tasks.filter(t => t.status !== 'completed');
             const completedTasks = tasks.filter(t => t.status === 'completed');
             
-            // Sort completed tasks by completed_date_time DESC
+            // Sort completed tasks by completed_date_time DESC (with fallbacks)
             completedTasks.sort((a, b) => {
-                const aTime = a.completed_date_time || '';
-                const bTime = b.completed_date_time || '';
+                const aTime = a.completed_date_time || a.last_modified_date_time || a.created_date_time || '';
+                const bTime = b.completed_date_time || b.last_modified_date_time || b.created_date_time || '';
                 return bTime.localeCompare(aTime);
             });
 
