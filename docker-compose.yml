@@ -13,3 +13,6 @@ services:
       - TZ=Asia/Seoul
       - MS_CLIENT_ID=
       - MS_CLIENT_SECRET=
+    command: >
+      sh -c "gunicorn --bind 0.0.0.0:5001 --timeout 600 app:app & 
+             python3 sync_worker.py"

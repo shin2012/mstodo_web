@@ -48,6 +48,8 @@ def load_token():
             return None
     return None
 
+import fcntl
+
 def get_refreshed_token():
     config = get_config()
     token = load_token()
@@ -57,30 +59,37 @@ def get_refreshed_token():
     # Check if expired or about to expire (within 5 minutes)
     expires_at = token.get('expires_at', 0)
     if expires_at < time.time() + 300:
-        client_id = config.get('connect', 'client_id')
-        client_secret = config.get('connect', 'client_secret')
-        refresh_token_val = token.get('refresh_token')
-        
-        if not refresh_token_val:
-            return token # Cannot refresh without refresh_token, try using existing one
-            
-        print(f"Attempting to refresh token for {client_id}")
-        url = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
-        data = {
-            'client_id': client_id,
-            'client_secret': client_secret,
-            'grant_type': 'refresh_token',
-            'refresh_token': refresh_token_val,
-            'scope': 'openid offline_access Tasks.ReadWrite'
-        }
+        # Use file locking to prevent multiple processes from refreshing at the same time
+        lock_file = open(CONFIG_FILE + '.lock', 'w')
         try:
+            fcntl.flock(lock_file, fcntl.LOCK_EX)
+            # Re-load token inside lock to check if another process already refreshed it
+            token = load_token()
+            expires_at = token.get('expires_at', 0)
+            if expires_at >= time.time() + 300:
+                return token
+
+            client_id = config.get('connect', 'client_id')
+            client_secret = config.get('connect', 'client_secret')
+            refresh_token_val = token.get('refresh_token')
+            
+            if not refresh_token_val:
+                return token
+                
+            print(f"Attempting to refresh token for {client_id}")
+            url = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
+            data = {
+                'client_id': client_id,
+                'client_secret': client_secret,
+                'grant_type': 'refresh_token',
+                'refresh_token': refresh_token_val,
+                'scope': 'openid offline_access Tasks.ReadWrite'
+            }
             resp = requests.post(url, data=data)
             if resp.status_code == 200:
                 new_token = resp.json()
-                # If refresh_token is missing in response, keep the old one
                 if 'refresh_token' not in new_token:
                     new_token['refresh_token'] = refresh_token_val
-                
                 if 'expires_at' not in new_token:
                     new_token['expires_at'] = int(time.time()) + new_token.get('expires_in', 3600)
                 
@@ -90,13 +99,13 @@ def get_refreshed_token():
                 return new_token
             else:
                 print(f"Token refresh failed: {resp.text}")
-                # If refresh fails, try using the current token one last time if it's not strictly expired
-                if expires_at > time.time():
-                    return token
-                return None
+                return token if expires_at > time.time() else None
         except Exception as e:
             print(f"Error during token refresh: {e}")
             return token if expires_at > time.time() else None
+        finally:
+            fcntl.flock(lock_file, fcntl.LOCK_UN)
+            lock_file.close()
             
     return token
 
