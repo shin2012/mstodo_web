@@ -263,6 +263,18 @@ def clear_all_sync_tokens():
     conn.commit()
     conn.close()
 
+def mark_missing_tasks_deleted(list_id, returned_ids):
+    """During a fresh sync, mark tasks not returned by the API as deleted."""
+    conn = get_db()
+    c = conn.cursor()
+    c.execute('SELECT id FROM tasks WHERE list_id = ? AND is_deleted = 0', (list_id,))
+    existing_ids = {row['id'] for row in c.fetchall()}
+    missing_ids = existing_ids - returned_ids
+    for task_id in missing_ids:
+        c.execute('UPDATE tasks SET is_deleted = 1 WHERE id = ?', (task_id,))
+    conn.commit()
+    conn.close()
+
 def clear_all_data():
     conn = get_db()
     c = conn.cursor()

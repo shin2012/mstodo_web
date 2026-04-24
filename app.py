@@ -291,23 +291,32 @@ def sync_all():
             l_id = task_list['id']
             d_link = database.get_sync_token(f"tasks_{l_id}")
             t_url = d_link if d_link else f"https://graph.microsoft.com/v1.0/me/todo/lists/{l_id}/tasks/delta"
-            
+            is_fresh_sync = d_link is None
+
             t_data = []
+            returned_task_ids = set()
             while t_url:
                 t_resp = requests.get(t_url, headers=headers)
                 if t_resp.status_code == 410:
                     database.clear_sync_token(f"tasks_{l_id}")
                     t_url = f"https://graph.microsoft.com/v1.0/me/todo/lists/{l_id}/tasks/delta"
+                    is_fresh_sync = True
+                    t_data = []
+                    returned_task_ids = set()
                     continue
                 if t_resp.status_code != 200:
                     break
-                    
+
                 t_resp_data = t_resp.json()
                 t_items = t_resp_data.get('value', [])
                 if t_items:
                     has_changes = True
                     t_data.extend(t_items)
-                    
+                    if is_fresh_sync:
+                        for item in t_items:
+                            if not item.get('@removed'):
+                                returned_task_ids.add(item['id'])
+
                 if '@odata.nextLink' in t_resp_data:
                     t_url = t_resp_data['@odata.nextLink']
                 elif '@odata.deltaLink' in t_resp_data:
@@ -315,9 +324,12 @@ def sync_all():
                     break
                 else:
                     break
-                    
+
             if t_data:
                 database.upsert_tasks(l_id, t_data)
+
+            if is_fresh_sync:
+                database.mark_missing_tasks_deleted(l_id, returned_task_ids)
 
         # Sync tasks sequentially or with ThreadPool
         with ThreadPoolExecutor(max_workers=5) as executor:
