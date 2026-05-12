@@ -8,3 +8,7 @@ token.json
 config.ini
 gunicorn.ctl
 mstodo_web_bk/
+mstodo.db
+list_groups.json
+config.ini.lock
+check_db.py
