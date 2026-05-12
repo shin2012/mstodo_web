@@ -773,7 +773,7 @@
                                            ${isCompleted ? 'disabled' : ''}
                                            onchange="toggleSubtask('${task.list_id}', '${task.id}', '${st.id}', this.checked, this)"
                                            class="w-4 h-4 rounded border-slate-400/60 text-blue-600 focus:ring-blue-500/30 cursor-pointer bg-white/50">
-                                    <span class="text-[13px] ${st.isChecked ? 'line-through text-slate-400 font-medium' : 'text-slate-600 font-semibold'} transition-all outline-none"
+                                    <span class="w-fit inline-block text-[13px] ${st.isChecked ? 'line-through text-slate-400 font-medium' : 'text-slate-600 font-semibold'} transition-all outline-none"
                                           ${isCompleted ? '' : 'contenteditable="true"'}
                                           onblur="updateSubtaskTitle('${task.list_id}', '${task.id}', '${st.id}', this)"
                                           onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }">
@@ -796,7 +796,7 @@
                         </div>
                         <div class="flex-grow min-w-0">
                             <div class="flex items-center justify-between">
-                                <h3 class="text-[15px] font-bold text-slate-700 leading-snug outline-none min-w-0 ${isCompleted ? 'line-through text-slate-400' : ''}"
+                                <h3 class="w-fit inline-block text-[15px] font-bold text-slate-700 leading-snug outline-none min-w-0 ${isCompleted ? 'line-through text-slate-400' : ''}"
                                     ${isCompleted ? '' : 'contenteditable="true"'}
                                     onblur="updateTaskTitle('${task.list_id}', '${task.id}', this)"
                                     onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }">

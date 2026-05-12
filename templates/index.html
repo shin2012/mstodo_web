@@ -942,7 +942,7 @@
                                            ${isCompleted ? 'disabled' : ''}
                                            onchange="toggleSubtask('${task.list_id}', '${task.id}', '${st.id}', this.checked, this)"
                                            class="w-3.5 h-3.5 rounded border-slate-400/60 text-blue-600 focus:ring-blue-500/30 cursor-pointer bg-white/50 hover:border-blue-500">
-                                    <span class="text-[12.5px] ${st.isChecked ? 'line-through text-slate-400 font-medium' : 'text-slate-600 font-semibold'} transition-all outline-none"
+                                    <span class="w-fit inline-block text-[12.5px] ${st.isChecked ? 'line-through text-slate-400 font-medium' : 'text-slate-600 font-semibold'} transition-all outline-none"
                                           ${isCompleted ? '' : 'contenteditable="true"'}
                                           onblur="updateSubtaskTitle('${task.list_id}', '${task.id}', '${st.id}', this)"
                                           onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }">
@@ -965,7 +965,7 @@
                         </div>
                         <div class="flex-grow min-w-0 flex items-center justify-between">
                             <div class="flex items-center space-x-2 min-w-0">
-                                <h3 class="text-[14.5px] font-bold text-slate-700 group-hover:text-blue-900 transition-colors outline-none truncate ${isCompleted ? 'line-through text-slate-400' : ''}"
+                                <h3 class="w-fit inline-block text-[14.5px] font-bold text-slate-700 group-hover:text-blue-900 transition-colors outline-none truncate ${isCompleted ? 'line-through text-slate-400' : ''}"
                                     ${isCompleted ? '' : 'contenteditable="true"'}
                                     onblur="updateTaskTitle('${task.list_id}', '${task.id}', this)"
                                     onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }">
