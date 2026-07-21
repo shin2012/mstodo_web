@@ -10,52 +10,35 @@
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
     <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
     <style>
-        body { 
-            font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
-            background-color: #f8fafc; 
+        :root {
+            --bg: #F7F6F2;
+            --surface: #FFFFFF;
+            --surface-2: #EFEDE6;
+            --border: #E3E1DA;
+            --border-2: #C8C5BC;
+            --text-1: #1A1917;
+            --text-2: #5C5751;
+            --text-3: #9B9790;
+            --accent: #C96442;
+            --accent-bg: #FAF0EB;
+            --accent-hover: #B55A38;
+            --blue: #3A6FBF;
+            --blue-bg: #EEF3FB;
+            --green: #367A52;
+            --green-bg: #EAF4EF;
+            --red: #C04038;
+            --red-bg: #FAEAEA;
+            --amber: #A67530;
+            --amber-bg: #FBF4E6;
+        }
+        body {
+            font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+            background-color: var(--bg);
             margin: 0;
             min-height: 100vh;
             overflow-x: hidden;
             -webkit-font-smoothing: antialiased;
         }
-        
-        /* Enhanced Animated Background */
-        .bg-animate {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            z-index: -1;
-            background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
-            overflow: hidden;
-            transition: opacity 1s ease;
-        }
-        .bg-animate.hidden-blobs .blob {
-            display: none;
-        }
-        .blob {
-            position: absolute;
-            width: 800px; height: 800px;
-            background: radial-gradient(circle, rgba(59, 130, 246, 0.15) 0%, rgba(59, 130, 246, 0) 70%);
-            border-radius: 50%;
-            filter: blur(60px);
-            animation: move 15s infinite alternate ease-in-out;
-        }
-        .blob-2 {
-            width: 700px; height: 700px;
-            background: radial-gradient(circle, rgba(99, 102, 241, 0.12) 0%, rgba(99, 102, 241, 0) 70%);
-            top: 10%; right: -5%;
-            animation-duration: 20s; animation-delay: -5s;
-        }
-        .blob-3 {
-            width: 1000px; height: 1000px;
-            background: radial-gradient(circle, rgba(37, 99, 235, 0.1) 0%, rgba(37, 99, 235, 0) 70%);
-            bottom: -10%; left: -5%;
-            animation-duration: 25s; animation-delay: -10s;
-        }
-        @keyframes move {
-            0% { transform: translate(-10%, -10%) rotate(0deg) scale(1); }
-            100% { transform: translate(15%, 15%) rotate(90deg) scale(1.1); }
-        }
-
         /* Weather Effects */
         #weather-layer {
             position: fixed;
@@ -66,170 +49,163 @@
         }
         .rain {
             position: absolute;
-            background: rgba(255, 255, 255, 0.4);
-            width: 1.5px; height: 15px; top: -20px;
+            background: linear-gradient(to bottom, rgba(100, 150, 220, 0.0), rgba(100, 150, 230, 0.7));
+            width: 2px; height: 20px; top: -20px;
+            border-radius: 0 0 2px 2px;
             animation: fall linear infinite;
+        }
+        .storm-rain {
+            position: absolute;
+            background: linear-gradient(to bottom, rgba(80, 120, 210, 0.0), rgba(80, 120, 210, 0.8));
+            width: 2px; height: 22px; top: -25px;
+            border-radius: 0 0 2px 2px;
+            animation: fall-storm-2 linear infinite;
         }
         .snow {
             position: absolute;
-            background: white;
+            background: rgba(200, 225, 255, 0.85);
             border-radius: 50%; top: -10px;
+            box-shadow: 0 0 3px rgba(180, 210, 255, 0.5);
             animation: fall linear infinite;
         }
-        @keyframes fall {
-            to { transform: translateY(100vh); }
+        @keyframes fall { to { transform: translateY(110vh); } }
+        @keyframes fall-storm-1 {
+            from { transform: translateY(-25px) translateX(0); }
+            to   { transform: translateY(110vh) translateX(20px); }
         }
-        
-        /* Sun glare for Clear weather */
-        .sun-glare {
-            position: absolute;
-            top: -10%; right: -10%; width: 60%; height: 60%;
-            background: radial-gradient(circle, rgba(255, 253, 230, 0.15) 0%, rgba(255, 253, 230, 0) 70%);
-            filter: blur(40px);
-            z-index: -1;
-            opacity: 0; transition: opacity 2s ease;
+        @keyframes fall-storm-2 {
+            from { transform: translateY(-25px) translateX(0); }
+            to   { transform: translateY(110vh) translateX(38px); }
         }
-        .sun-glare.active { opacity: 1; animation: pulse-glare 10s infinite alternate ease-in-out; }
-        @keyframes pulse-glare {
-            0% { transform: scale(1); opacity: 0.1; }
-            100% { transform: scale(1.2); opacity: 0.2; }
+        @keyframes fall-storm-3 {
+            from { transform: translateY(-25px) translateX(0); }
+            to   { transform: translateY(110vh) translateX(55px); }
         }
-
-        /* Sparkles for Clear weather */
         .sparkle {
             position: absolute;
-            background: white; border-radius: 50%;
-            opacity: 0; animation: sparkle-anim 4s infinite linear;
+            background: rgba(255, 210, 80, 0.6); border-radius: 50%;
+            opacity: 0; animation: sparkle-anim 3s infinite linear;
         }
         @keyframes sparkle-anim {
             0%, 100% { transform: scale(0); opacity: 0; }
-            50% { transform: scale(1); opacity: 0.3; }
+            50% { transform: scale(1); opacity: 0.7; }
         }
-
         .cloud-overlay {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(148, 163, 184, 0.1);
-            backdrop-filter: blur(2px);
+            background: rgba(160, 155, 148, 0.14);
             opacity: 0; transition: opacity 2s ease;
         }
         .cloud-overlay.active { opacity: 1; }
-        .cloud-overlay.heavy { background: rgba(100, 116, 139, 0.2); backdrop-filter: blur(5px); }
-
-        /* Mist/Fog */
+        .cloud-overlay.heavy { background: rgba(110, 105, 98, 0.20); }
         .mist-overlay {
             position: absolute;
-            bottom: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(to top, rgba(255, 255, 255, 0.3) 0%, rgba(255, 255, 255, 0) 100%);
+            bottom: 0; left: 0; width: 100%; height: 65%;
+            background: linear-gradient(to top, rgba(235,233,228,0.72) 0%, rgba(235,233,228,0.15) 60%, rgba(235,233,228,0) 100%);
             opacity: 0; transition: opacity 3s ease;
-            backdrop-filter: blur(8px);
         }
         .mist-overlay.active { opacity: 1; }
-
-        /* Thunder Flash */
+        .sun-glare {
+            position: absolute;
+            top: 0; right: 0; width: 100%; height: 100%;
+            background: radial-gradient(ellipse 60% 55% at 85% 0%, rgba(255,210,80,0.22) 0%, rgba(255,190,60,0.10) 40%, rgba(200,160,80,0.03) 65%, transparent 100%);
+            opacity: 0; transition: opacity 2s ease;
+        }
+        .sun-glare.active { opacity: 1; animation: sun-pulse 5s ease-in-out infinite; }
+        @keyframes sun-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
         .thunder-flash {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
-            background: white;
-            opacity: 0;
-            z-index: 10;
+            background: white; opacity: 0; z-index: 10;
         }
-        .flash-active { animation: flash-anim 0.5s ease-out; }
+        .flash-active { animation: flash-anim 0.6s ease-out; }
         @keyframes flash-anim {
-            0% { opacity: 0; }
-            10% { opacity: 0.3; }
-            20% { opacity: 0; }
-            25% { opacity: 0.4; }
-            100% { opacity: 0; }
+            0% { opacity: 0; } 8% { opacity: 0.35; } 16% { opacity: 0; } 24% { opacity: 0.45; } 100% { opacity: 0; }
         }
 
-        /* Compact Layout */
-        .task-card { 
-            transition: all 0.2s ease; 
-            background: rgba(255, 255, 255, 0.98);
-            border: 1px solid #f1f5f9;
-            padding-top: 0.75rem !important;
-            padding-bottom: 0.75rem !important;
+        /* Task cards — flat list style */
+        .task-card {
+            transition: background 0.1s;
+            border-bottom: 1px solid var(--border);
+            position: relative;
         }
-        .task-card:hover { 
-            transform: translateY(-1px); 
-            box-shadow: 0 4px 12px -2px rgb(0 0 0 / 0.05); 
-            border-color: #cbd5e1;
-        }
-        .completed { text-decoration: line-through; color: #94a3b8; opacity: 0.6; }
-        .fade-out { opacity: 0; transform: translateX(20px); transition: all 0.4s ease; }
-        
-        .chip { transition: all 0.2s; cursor: pointer; white-space: nowrap; flex-shrink: 0; }
-        .chip.active { background-color: #3b82f6 !important; color: white !important; border-color: #3b82f6 !important; box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.2); }
-        
-        .sidebar-item { transition: all 0.2s; cursor: pointer; border-radius: 0.5rem; white-space: nowrap; margin-bottom: 2px; }
-        .sidebar-item.active { background-color: #3b82f6 !important; color: white !important; box-shadow: 0 4px 8px rgba(59, 130, 246, 0.15); }
-        .sidebar-item:hover:not(.active) { background-color: #f1f5f9; }
+        .task-card:hover { background: var(--surface-2); }
+        #task-list > .task-card:first-child,
+        #completed-tasks-container > .task-card:first-child { border-top: 1px solid var(--border); }
+        .important-task { border-left: 2px solid var(--amber); padding-left: calc(1rem - 2px); }
+        .overdue-task   { border-left: 2px solid var(--red);   padding-left: calc(1rem - 2px); }
+        .today-task     { border-left: 2px solid var(--green); padding-left: calc(1rem - 2px); }
+        .tomorrow-task  { border-left: 2px solid var(--blue);  padding-left: calc(1rem - 2px); }
 
-        /* List Groups */
+        .completed { text-decoration: line-through; color: var(--text-3); }
+        .fade-out { opacity: 0; transition: all 0.3s ease; }
+
+        .chip { transition: all 0.1s; cursor: pointer; white-space: nowrap; flex-shrink: 0; border-radius: 3px; }
+        .chip.active { background-color: var(--text-1) !important; color: white !important; border-color: var(--text-1) !important; }
+
+        .sidebar-item { transition: background 0.1s; cursor: pointer; border-radius: 4px; white-space: nowrap; margin-bottom: 1px; }
+        .sidebar-item.active { background-color: var(--accent-bg) !important; color: var(--accent) !important; }
+        .sidebar-item:hover:not(.active) { background-color: var(--surface-2); }
+
         .group-header { cursor: pointer; user-select: none; }
-        .group-content { transition: max-height 0.3s ease-out; overflow: hidden; }
+        .group-content { transition: max-height 0.25s ease-out; overflow: hidden; }
         .group-content.collapsed { max-height: 0 !important; }
-        .rotate-icon { transition: transform 0.2s; }
+        .rotate-icon { transition: transform 0.15s; }
         .collapsed .rotate-icon { transform: rotate(-90deg); }
 
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
-        .sidebar { height: calc(100vh - 4rem); position: sticky; top: 2rem; }
 
-        /* Inline Edit Styling */
+        .sidebar { height: calc(100vh - 3rem); position: sticky; top: 1.5rem; }
+
         [contenteditable="true"]:focus {
             outline: none;
-            background: rgba(241, 245, 249, 0.8);
-            border-radius: 4px;
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
-            padding: 0 4px;
+            background: var(--surface-2);
+            border-radius: 3px;
+            box-shadow: 0 0 0 2px var(--accent);
+            padding: 0 3px;
+            overflow: visible;
+            white-space: normal;
         }
-        
-        .star-btn:hover i { transform: scale(1.2); }
 
-        /* Due Date Button */
-        .due-date-btn { opacity: 0; transition: opacity 0.2s; }
+        .star-btn:hover i { transform: scale(1.1); }
+        .due-date-btn { opacity: 0; transition: opacity 0.1s; }
         .task-card:hover .due-date-btn { opacity: 1; }
 
-        /* Date Picker Popup */
         #date-picker-popup {
             position: absolute;
             z-index: 50;
-            background: white;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-            padding: 12px;
-            width: 180px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            padding: 10px;
+            width: 168px;
         }
         </style>
         </head>
-        <body class="p-4 md:p-8">
+        <body class="p-4 md:p-6">
         <div id="date-picker-popup" class="hidden">
         <div class="relative mb-2">
-            <input type="text" id="date-input-field" 
-                   class="w-full p-2 pr-10 border rounded text-sm outline-none focus:ring-2 focus:ring-blue-500/20 font-bold text-slate-700"
+            <input type="text" id="date-input-field"
+                   class="w-full p-2 pr-8 border border-[#E3E1DA] rounded text-[12px] outline-none focus:border-[#C96442] font-medium text-[#1A1917]"
                    readonly onclick="document.getElementById('hidden-date-picker').showPicker()">
-            <div class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+            <div class="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#9B9790] pointer-events-none text-xs">
                 <i class="far fa-calendar-alt"></i>
             </div>
-            <input type="date" id="hidden-date-picker" class="absolute opacity-0 pointer-events-none" 
+            <input type="date" id="hidden-date-picker" class="absolute opacity-0 pointer-events-none"
                    onchange="handleHiddenDateChange(this.value)">
         </div>
         <div class="flex flex-col space-y-1">
-            <button onclick="applyDueDate()" class="bg-blue-500 text-white text-[11px] font-bold py-1.5 rounded hover:bg-blue-600 transition-all">적용</button>
-            <button onclick="clearDueDate()" class="bg-rose-50 text-rose-500 text-[11px] font-bold py-1.5 rounded hover:bg-rose-100 transition-all border border-rose-100">기한 삭제</button>
-            <button onclick="closeDatePicker()" class="text-slate-400 text-[11px] font-bold py-1 rounded hover:bg-slate-50 transition-all">취소</button>
+            <button onclick="applyDueDate()" class="bg-[#C96442] text-white text-[11px] font-medium py-1.5 rounded hover:bg-[#B55A38] transition-colors">적용</button>
+            <button onclick="clearDueDate()" class="border border-[#E3E1DA] text-[#C04038] text-[11px] font-medium py-1.5 rounded hover:bg-[#FAEAEA] transition-colors">기한 삭제</button>
+            <button onclick="closeDatePicker()" class="text-[#9B9790] text-[11px] font-medium py-1 rounded hover:bg-[#F0EFE9] transition-colors">취소</button>
         </div>
         </div>
-<body class="p-4 md:p-8">
-    <div class="bg-animate">
-        <div class="blob"></div>
-        <div class="blob blob-2"></div>
-        <div class="blob blob-3"></div>
-    </div>
+<body class="p-4 md:p-6">
     <div id="weather-layer">
         <div class="sun-glare"></div>
         <div class="cloud-overlay"></div>
@@ -237,65 +213,67 @@
         <div class="thunder-flash"></div>
     </div>
 
+    <!-- Date/Time/Weather floating widget — visible when viewport has margin on sides -->
+    <div id="side-widget" class="hidden xl:flex fixed bottom-6 left-5 flex-col items-start z-10 pointer-events-none select-none">
+        <div class="bg-white/80 backdrop-blur-sm border border-[#E3E1DA] rounded-lg px-3.5 py-2.5 shadow-sm flex flex-col gap-1">
+            <div id="widget-weather" class="flex items-center gap-1.5 whitespace-nowrap">
+                <span id="widget-icon" class="text-lg leading-none flex-shrink-0">🌤️</span>
+                <span id="widget-temp" class="text-[12px] font-bold text-[#1A1917] leading-none">--°C</span>
+                <span id="widget-desc" class="text-[12px] font-bold text-[#1A1917] leading-none">불러오는 중</span>
+            </div>
+            <div class="h-px bg-[#E3E1DA] my-0.5"></div>
+            <div id="widget-time" class="text-[15px] font-bold text-[#1A1917] tabular-nums leading-none text-center"></div>
+            <div id="widget-date" class="text-[10px] text-[#9B9790] font-medium leading-none mt-0.5 text-center"></div>
+        </div>
+    </div>
+
     <div class="max-w-6xl mx-auto relative">
-        <div class="flex flex-col md:flex-row gap-8">
+        <div class="flex flex-col md:flex-row gap-6">
             <!-- Sidebar (Desktop Viewport) -->
-            <aside class="md:w-64 flex-shrink-0 hidden md:block">
+            <aside class="md:w-48 flex-shrink-0 hidden md:block">
                 <div class="sidebar flex flex-col">
-                    <a href="javascript:void(0)" onclick="selectList(null)" class="mb-6 px-1 flex items-center space-x-3 group">
-                        <div class="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform">
-                            <i class="fas fa-check-double text-white text-sm"></i>
+                    <a href="javascript:void(0)" onclick="selectList(null)" class="mb-5 px-2 flex items-center space-x-2.5">
+                        <div class="w-5 h-5 bg-[#C96442] flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-check text-white text-[9px]"></i>
                         </div>
-                        <div class="flex flex-col flex-grow">
-                            <h1 class="text-2xl font-black text-slate-800 tracking-tight leading-none">to-do list</h1>
-                            <span id="desktop-clock" class="text-[10px] font-semibold text-slate-400 mt-1 tracking-wider"></span>
-                        </div>
-                        <div class="character-face w-8 h-8 bg-yellow-400 rounded-full flex flex-col justify-center items-center shadow-sm relative ml-2 group-hover:scale-110 transition-transform">
-                            <div class="flex items-center gap-1">
-                                <div class="eye w-2 h-2.5 bg-white rounded-full relative overflow-hidden">
-                                    <div class="pupil w-1 h-1 bg-slate-800 rounded-full absolute top-[40%] left-[40%]"></div>
-                                </div>
-                                <div class="eye w-2 h-2.5 bg-white rounded-full relative overflow-hidden">
-                                    <div class="pupil w-1 h-1 bg-slate-800 rounded-full absolute top-[40%] left-[40%]"></div>
-                                </div>
-                            </div>
-                            <!-- Mouth -->
-                            <div class="w-3 h-1.5 border-b-2 border-amber-600 rounded-full mt-0.5"></div>
+                        <div class="flex flex-col flex-grow min-w-0">
+                            <h1 class="text-[13px] font-bold text-[#1A1917] leading-none">To-Do</h1>
+                            <span id="desktop-clock" class="text-[10px] text-[#9B9790] mt-0.5"></span>
                         </div>
                     </a>
 
                     <!-- Special Menu: All Tasks -->
-                    <div class="px-2 mb-4">
-                        <div onclick="selectList(null)" id="all-tasks-btn" class="sidebar-item group flex items-center px-4 py-2.5 text-slate-500 font-bold hover:bg-white/60 transition-all text-[14px]">
-                            <i class="fas fa-list-ul mr-3 opacity-40 group-[.active]:opacity-100 text-sm"></i>
+                    <div class="px-1 mb-2">
+                        <div onclick="selectList(null)" id="all-tasks-btn" class="sidebar-item group flex items-center px-3 py-1.5 text-[#5C5751] font-medium text-[13px]">
+                            <i class="fas fa-list-ul mr-2.5 text-xs opacity-50 group-[.active]:opacity-100"></i>
                             <span>모든 할 일</span>
                         </div>
                     </div>
 
-                    <nav class="space-y-1 overflow-y-auto no-scrollbar flex-grow" id="sidebar-list">
+                    <nav class="overflow-y-auto no-scrollbar flex-grow px-1" id="sidebar-list">
                         <!-- Groups and Lists will be injected here -->
                     </nav>
 
-                    <div class="mt-auto pt-6 px-2 flex items-center justify-between">
-                        <div class="flex items-center space-x-1 relative">
-                            <a href="/settings" class="w-9 h-9 flex items-center justify-center rounded-full text-slate-400 hover:bg-white hover:text-blue-600 transition-all border border-transparent hover:border-slate-200" title="설정">
-                                <i class="fas fa-cog text-xl"></i>
+                    <div class="mt-auto pt-3 px-1 flex items-center justify-between border-t border-[#E3E1DA]">
+                        <div class="flex items-center space-x-0.5 relative">
+                            <a href="/settings" class="w-7 h-7 flex items-center justify-center text-[#9B9790] hover:text-[#C96442] hover:bg-[#FAF0EB] rounded transition-all" title="설정">
+                                <i class="fas fa-cog text-sm"></i>
                             </a>
-                            <button onclick="toggleAddGroupPopup()" id="btn-add-group" class="w-9 h-9 flex items-center justify-center rounded-full text-slate-400 hover:bg-white hover:text-emerald-600 transition-all border border-transparent hover:border-slate-200" title="그룹 추가">
-                                <i class="fas fa-folder-plus text-lg"></i>
+                            <button onclick="toggleAddGroupPopup()" id="btn-add-group" class="w-7 h-7 flex items-center justify-center text-[#9B9790] hover:text-[#367A52] hover:bg-[#EAF4EF] rounded transition-all" title="그룹 추가">
+                                <i class="fas fa-folder-plus text-sm"></i>
                             </button>
                             <!-- Add Group Popup -->
-                            <div id="add-group-popup" class="hidden absolute bottom-full left-8 mb-2 w-52 bg-white rounded-xl shadow-xl border border-slate-200 p-3 z-50 transform transition-all origin-bottom-left">
-                                <input type="text" id="add-group-input" placeholder="새 그룹 이름" class="w-full text-[13px] px-3 py-2 border border-slate-200 rounded-lg focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 mb-2" onkeydown="if(event.key === 'Enter') confirmAddGroup()">
-                                <div class="flex justify-end space-x-2">
-                                    <button onclick="toggleAddGroupPopup()" class="px-3 py-1.5 text-[11px] font-bold text-slate-500 hover:bg-slate-100 rounded-lg transition-colors">취소</button>
-                                    <button onclick="confirmAddGroup()" class="px-3 py-1.5 text-[11px] font-bold bg-blue-500 text-white hover:bg-blue-600 rounded-lg shadow-sm shadow-blue-500/30 transition-colors">추가</button>
+                            <div id="add-group-popup" class="hidden absolute bottom-full left-0 mb-2 w-48 bg-white rounded border border-[#E3E1DA] shadow-lg p-2.5 z-50">
+                                <input type="text" id="add-group-input" placeholder="새 그룹 이름" class="w-full text-[12px] px-2.5 py-1.5 border border-[#E3E1DA] rounded focus:outline-none focus:border-[#C96442] mb-2" onkeydown="if(event.key === 'Enter') confirmAddGroup()">
+                                <div class="flex justify-end space-x-1.5">
+                                    <button onclick="toggleAddGroupPopup()" class="px-2.5 py-1 text-[11px] font-medium text-[#9B9790] hover:bg-[#F0EFE9] rounded transition-colors">취소</button>
+                                    <button onclick="confirmAddGroup()" class="px-2.5 py-1 text-[11px] font-medium bg-[#C96442] text-white hover:bg-[#B55A38] rounded transition-colors">추가</button>
                                 </div>
                             </div>
                         </div>
-                        <button onclick="triggerSync(true)" class="flex items-center space-x-2 bg-white/60 backdrop-blur-md px-4 py-2 rounded-full border border-slate-200/50 shadow-sm hover:bg-white hover:text-blue-500 transition-all active:scale-95 group">
-                            <span class="text-xs font-bold text-slate-500 group-hover:text-blue-500">업데이트</span>
-                            <i class="fas fa-sync-alt text-[10px] text-slate-300 group-hover:text-blue-500" id="refresh-icon-desktop"></i>
+                        <button onclick="triggerSync(true)" class="flex items-center space-x-1 px-2.5 py-1.5 border border-[#E3E1DA] bg-white hover:border-[#C96442] hover:text-[#C96442] rounded text-[#9B9790] transition-all">
+                            <span class="text-[11px] font-medium">동기화</span>
+                            <i class="fas fa-sync-alt text-[9px]" id="refresh-icon-desktop"></i>
                         </button>
                     </div>
                 </div>
@@ -304,83 +282,72 @@
             <!-- Mobile Viewport -->
             <div class="md:hidden w-full">
                 <header class="mb-4">
-                    <div class="flex justify-between items-center mb-4">
-                        <div class="flex items-center space-x-3">
-                            <a href="javascript:void(0)" onclick="selectList(null)" class="flex items-center space-x-2 group">
-                                <div class="w-6 h-6 bg-blue-500 rounded flex items-center justify-center group-hover:scale-110 transition-transform">
-                                    <i class="fas fa-check-double text-white text-[10px]"></i>
+                    <div class="flex justify-between items-center mb-3">
+                        <div class="flex items-center space-x-2.5">
+                            <a href="javascript:void(0)" onclick="selectList(null)" class="flex items-center space-x-2">
+                                <div class="w-5 h-5 bg-[#C96442] flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-check text-white text-[8px]"></i>
                                 </div>
                                 <div class="flex flex-col">
-                                    <h1 class="text-2xl font-black text-slate-800 tracking-tight leading-none">to-do list</h1>
-                                    <span id="mobile-clock" class="text-[9px] font-semibold text-slate-400 mt-0.5 tracking-wider"></span>
-                                </div>
-                                <div class="character-face w-6 h-6 bg-yellow-400 rounded-full flex flex-col justify-center items-center shadow-sm relative ml-1 group-hover:scale-110 transition-transform">
-                                    <div class="flex items-center gap-0.5">
-                                        <div class="eye w-1.5 h-2 bg-white rounded-full relative overflow-hidden">
-                                            <div class="pupil w-[3px] h-[3px] bg-slate-800 rounded-full absolute top-[40%] left-[40%]"></div>
-                                        </div>
-                                        <div class="eye w-1.5 h-2 bg-white rounded-full relative overflow-hidden">
-                                            <div class="pupil w-[3px] h-[3px] bg-slate-800 rounded-full absolute top-[40%] left-[40%]"></div>
-                                        </div>
-                                    </div>
-                                    <!-- Mouth -->
-                                    <div class="w-2 h-1 border-b-[1.5px] border-amber-600 rounded-full mt-0.5"></div>
+                                    <h1 class="text-[13px] font-bold text-[#1A1917] leading-none">To-Do</h1>
+                                    <span id="mobile-clock" class="text-[9px] text-[#9B9790] mt-0.5"></span>
                                 </div>
                             </a>
-                            <a href="/settings" class="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-white hover:text-blue-600 transition-all" title="설정">
-                                <i class="fas fa-cog text-xl"></i>
+                            <a href="/settings" class="w-7 h-7 flex items-center justify-center text-[#9B9790] hover:text-[#C96442] hover:bg-[#FAF0EB] rounded transition-all" title="설정">
+                                <i class="fas fa-cog text-sm"></i>
                             </a>
                         </div>
-                        <button onclick="triggerSync(true)" class="flex items-center space-x-2 bg-white/60 backdrop-blur-md px-4 py-2 rounded-full border border-slate-200/50 shadow-sm group">
-                            <span class="text-xs font-bold text-slate-500">업데이트</span>
-                            <i class="fas fa-sync-alt text-[10px] text-slate-300" id="refresh-icon-mobile"></i>
+                        <button onclick="triggerSync(true)" class="flex items-center space-x-1 px-2.5 py-1.5 border border-[#E3E1DA] bg-white rounded text-[#9B9790] hover:border-[#C96442] hover:text-[#C96442] transition-all">
+                            <span class="text-[11px] font-medium">동기화</span>
+                            <i class="fas fa-sync-alt text-[9px]" id="refresh-icon-mobile"></i>
                         </button>
                     </div>
                     <!-- Mobile Chips with No-Wrap and Horizontal Scroll -->
-                    <div id="list-container" class="flex flex-row flex-nowrap overflow-x-auto space-x-2 pb-2 no-scrollbar select-none w-full">
-                        <button onclick="selectList(null)" id="all-tasks-chip" class="flex-shrink-0 px-4 py-2 rounded-full text-xs font-bold transition-all bg-white shadow-sm border border-slate-200 text-blue-600">모든 할 일</button>
+                    <div id="list-container" class="flex flex-row flex-nowrap overflow-x-auto space-x-1.5 pb-2 no-scrollbar select-none w-full">
+                        <button onclick="selectList(null)" id="all-tasks-chip" class="flex-shrink-0 px-3 py-1 rounded text-[12px] font-medium transition-all bg-white border border-[#E3E1DA] text-[#5C5751]">모든 할 일</button>
                         <!-- Lists injected here -->
                     </div>
                 </header>
             </div>
 
             <!-- Main Content -->
-            <main class="flex-grow max-w-3xl">
-                <!-- Task Input (Restored Spacious Size) -->
-                <div class="relative group mb-6 md:mb-8">
-                    <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors">
-                        <i class="fas fa-pen-nib"></i>
+            <main class="flex-grow min-w-0">
+                <!-- Task Input -->
+                <div id="task-input-wrapper" class="relative flex mb-5 group">
+                    <div class="absolute left-3 top-1/2 -translate-y-1/2 text-[#9B9790] group-focus-within:text-[#C96442] transition-colors pointer-events-none">
+                        <i class="fas fa-plus text-xs"></i>
                     </div>
-                    <input type="text" id="task-input" 
-                           placeholder="어떤 일을 완료할까요?"
-                           class="w-full pl-11 pr-12 py-4 bg-white border border-slate-200 rounded-2xl shadow-sm focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all text-slate-700 font-medium text-[15px]"
+                    <input type="text" id="task-input"
+                           placeholder="목록을 선택하여 할 일을 추가하세요"
+                           class="flex-grow pl-8 pr-3 py-2.5 bg-[#F5F4F0] border border-[#E3E1DA] rounded-l outline-none transition-all text-[#1A1917] font-medium text-[13.5px] placeholder:text-[#B8B5AE] cursor-not-allowed opacity-60"
+                           disabled
                            onkeypress="if(event.key === 'Enter') addTask()">
-                    <button onclick="addTask()" class="absolute right-2 top-2 bottom-2 px-4 bg-blue-500 hover:bg-blue-600 text-white rounded-xl transition-all shadow-md hover:shadow-lg active:scale-95">
-                        <i class="fas fa-plus"></i>
+                    <button id="task-add-btn" onclick="addTask()" disabled class="px-4 py-2.5 bg-[#D4CFC8] text-[#9B9790] rounded-r transition-all font-medium text-[13px] flex-shrink-0 cursor-not-allowed opacity-60">
+                        추가
                     </button>
                 </div>
 
                 <!-- Loading State -->
-                <div id="loading" class="flex flex-col items-center justify-center py-24 space-y-4">
-                    <div class="relative w-12 h-12">
-                        <div class="absolute inset-0 border-4 border-blue-100 rounded-full"></div>
-                        <div class="absolute inset-0 border-4 border-blue-500 rounded-full border-t-transparent animate-spin"></div>
+                <div id="loading" class="flex flex-col items-center justify-center py-20 space-y-3">
+                    <div class="relative w-8 h-8">
+                        <div class="absolute inset-0 border-2 border-[#E3E1DA] rounded-full"></div>
+                        <div class="absolute inset-0 border-2 border-[#C96442] rounded-full border-t-transparent animate-spin"></div>
                     </div>
-                    <p class="text-sm font-semibold text-slate-400 animate-pulse">할 일을 불러오는 중...</p>
+                    <p class="text-xs font-medium text-[#9B9790]">불러오는 중...</p>
                 </div>
 
-                <!-- Task List (Initial Spacious Gap) -->
-                <div id="task-list" class="space-y-3 hidden">
+                <!-- Task List -->
+                <div id="task-list" class="hidden">
                     <!-- Tasks injected here -->
                 </div>
 
-                <!-- Empty State (Initial Spacious Style) -->
-                <div id="empty-state" class="hidden flex flex-col items-center justify-center py-24 bg-white rounded-3xl border border-dashed border-slate-200 shadow-inner">
-                    <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
-                        <i class="fas fa-check-double text-slate-200 text-4xl"></i>
+                <!-- Empty State -->
+                <div id="empty-state" class="hidden flex flex-col items-center justify-center py-20 border border-dashed border-[#E3E1DA]">
+                    <div class="w-10 h-10 bg-[#F0EFE9] flex items-center justify-center mb-3">
+                        <i class="fas fa-check text-[#9B9790] text-lg"></i>
                     </div>
-                    <h3 class="text-xl font-bold text-slate-700 mb-1">모든 할 일을 마쳤습니다!</h3>
-                    <p class="text-slate-400 text-sm font-medium">새로운 할 일을 추가하고 오늘을 기록해보세요.</p>
+                    <h3 class="text-sm font-semibold text-[#5C5751] mb-1">모든 할 일 완료</h3>
+                    <p class="text-[#9B9790] text-xs">새로운 할 일을 추가하세요.</p>
                 </div>
             </main>
         </div>
@@ -441,32 +408,32 @@
                 
                 const header = document.createElement('div');
                 header.id = `side-chip-group_${groupIdx}`;
-                header.className = `sidebar-item group-header group flex items-center justify-between px-4 py-2.5 text-slate-500 font-bold hover:bg-white/60 transition-all text-[14px] ${currentListId === 'group_' + groupIdx ? 'active' : ''}`;
+                header.className = `sidebar-item group-header group flex items-center justify-between px-3 py-1.5 text-[#5C5751] font-medium text-[13px] ${currentListId === 'group_' + groupIdx ? 'active' : ''}`;
                 header.style.cursor = 'pointer';
                 header.onclick = (e) => {
                     if (e.target.closest('.action-btn') || e.target.isContentEditable) return;
                     selectList(`group_${groupIdx}`);
                 };
                 header.innerHTML = `
-                    <div class="flex items-center space-x-3 flex-grow min-w-0">
-                        <div class="action-btn cursor-pointer flex items-center justify-center w-5 h-5 opacity-40 hover:opacity-100 flex-shrink-0 group-[.active]:opacity-100" onclick="toggleGroup(${groupIdx}); event.stopPropagation();">
-                            <i class="fas fa-chevron-down text-sm rotate-icon flex-shrink-0 ${group.collapsed ? 'collapsed' : ''}"></i>
+                    <div class="flex items-center space-x-2 flex-grow min-w-0">
+                        <div class="action-btn cursor-pointer flex items-center justify-center w-4 h-4 opacity-40 hover:opacity-100 flex-shrink-0 group-[.active]:opacity-100" onclick="toggleGroup(${groupIdx}); event.stopPropagation();">
+                            <i class="fas fa-chevron-down text-xs rotate-icon ${group.collapsed ? 'collapsed' : ''}"></i>
                         </div>
-                        <span class="group-name text-[14px] truncate outline-none" 
+                        <span class="group-name text-[13px] truncate outline-none"
                               onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }">${group.name}</span>
                     </div>
-                    <div class="flex items-center space-x-1 flex-shrink-0">
-                        <button onclick="editGroup(${groupIdx}, this); event.stopPropagation();" class="action-btn opacity-0 group-hover:opacity-100 hover:text-blue-500 transition-all p-1" title="이름 수정">
-                            <i class="fas fa-edit text-[14px]"></i>
+                    <div class="flex items-center space-x-0.5 flex-shrink-0">
+                        <button onclick="editGroup(${groupIdx}, this); event.stopPropagation();" class="action-btn opacity-0 group-hover:opacity-100 hover:text-[#C96442] transition-all p-1" title="이름 수정">
+                            <i class="fas fa-edit text-xs"></i>
                         </button>
-                        <button onclick="deleteGroup(${groupIdx}); event.stopPropagation();" class="action-btn opacity-0 group-hover:opacity-100 hover:text-rose-500 transition-all p-1" title="그룹 삭제">
-                            <i class="fas fa-times text-[14px]"></i>
+                        <button onclick="deleteGroup(${groupIdx}); event.stopPropagation();" class="action-btn opacity-0 group-hover:opacity-100 hover:text-[#C04038] transition-all p-1" title="그룹 삭제">
+                            <i class="fas fa-times text-xs"></i>
                         </button>
                     </div>
                 `;
 
                 const content = document.createElement('div');
-                content.className = `group-content space-y-0.5 mt-1 ${group.collapsed ? 'collapsed' : ''}`;
+                content.className = `group-content mt-0.5 ${group.collapsed ? 'collapsed' : ''}`;
                 content.dataset.groupIdx = groupIdx;
 
                 group.lists.forEach(listId => {
@@ -542,14 +509,14 @@
             const item = document.createElement('div');
             item.id = `side-chip-${list.id}`;
             item.dataset.listId = list.id;
-            item.className = `sidebar-item group flex items-center px-4 py-2.5 text-slate-500 font-bold hover:bg-white/60 transition-all text-[14px] ${currentListId === list.id ? 'active' : ''}`;
-            
+            item.className = `sidebar-item group flex items-center px-3 py-1.5 text-[#5C5751] font-medium text-[13px] ${currentListId === list.id ? 'active' : ''}`;
+
             let icon = 'fa-list-ul';
             if (list.wellKnownName === 'defaultList') icon = 'fa-inbox';
             else if (list.wellKnownName === 'flaggedEmails') icon = 'fa-envelope';
-            
+
             item.innerHTML = `
-                <i class="fas ${icon} mr-3 opacity-40 group-[.active]:opacity-100 text-sm"></i>
+                <i class="fas ${icon} mr-2.5 text-xs opacity-40 group-[.active]:opacity-100"></i>
                 <span class="truncate">${list.name}</span>
             `;
             item.onclick = () => selectList(list.id);
@@ -562,7 +529,7 @@
             allLists.forEach(list => {
                 const chip = document.createElement('div');
                 chip.id = `chip-${list.id}`;
-                chip.className = `chip px-4 py-2 rounded-xl border border-slate-200 bg-white text-slate-600 text-[13px] font-bold shadow-sm transition-all ${currentListId === list.id ? 'active' : ''}`;
+                chip.className = `chip px-3 py-1 border border-[#E3E1DA] bg-white text-[#5C5751] text-[12px] font-medium transition-all ${currentListId === list.id ? 'active' : ''}`;
                 chip.innerHTML = `${list.name}`;
                 chip.onclick = () => selectList(list.id);
                 mobileContainer.appendChild(chip);
@@ -697,9 +664,33 @@
             closeDatePicker();
         }
 
+        function updateTaskInputState() {
+            const canAdd = currentListId && !currentListId.startsWith('group_');
+            const input = document.getElementById('task-input');
+            const btn = document.getElementById('task-add-btn');
+            if (!input || !btn) return;
+            if (canAdd) {
+                input.disabled = false;
+                input.placeholder = '할 일 추가...';
+                input.classList.remove('bg-[#F5F4F0]', 'cursor-not-allowed', 'opacity-60');
+                input.classList.add('bg-white', 'focus:border-[#C96442]', 'placeholder:text-[#9B9790]');
+                btn.disabled = false;
+                btn.classList.remove('bg-[#D4CFC8]', 'text-[#9B9790]', 'cursor-not-allowed', 'opacity-60');
+                btn.classList.add('bg-[#C96442]', 'hover:bg-[#B55A38]', 'text-white');
+            } else {
+                input.disabled = true;
+                input.placeholder = '목록을 선택하여 할 일을 추가하세요';
+                input.classList.add('bg-[#F5F4F0]', 'cursor-not-allowed', 'opacity-60');
+                input.classList.remove('bg-white', 'focus:border-[#C96442]', 'placeholder:text-[#9B9790]');
+                btn.disabled = true;
+                btn.classList.add('bg-[#D4CFC8]', 'text-[#9B9790]', 'cursor-not-allowed', 'opacity-60');
+                btn.classList.remove('bg-[#C96442]', 'hover:bg-[#B55A38]', 'text-white');
+            }
+        }
+
         function selectList(id) {
             currentListId = id;
-            
+
             // Update UI for All Tasks
             const allBtn = document.getElementById('all-tasks-btn');
             const allChip = document.getElementById('all-tasks-chip');
@@ -724,6 +715,7 @@
             const activeSide = document.getElementById(`side-chip-${id}`);
             if (activeSide) activeSide.classList.add('active');
             
+            updateTaskInputState();
             fetchTasks();
             triggerSync(); // Background sync on every navigation
         }
@@ -858,13 +850,13 @@
             // Show completed tasks only for individual lists
             if (completedTasks.length > 0 && currentListId && !currentListId.startsWith('group_')) {
                 const hr = document.createElement('div');
-                hr.className = 'my-8 border-t border-slate-200/50';
+                hr.className = 'my-4';
                 container.appendChild(hr);
 
                 const isCollapsed = localStorage.getItem(`completedCollapsed_${currentListId}`) === 'true';
 
                 const header = document.createElement('div');
-                header.className = 'flex items-center space-x-2 mb-4 px-2 cursor-pointer group/comp';
+                header.className = 'flex items-center space-x-1.5 mb-0 px-4 py-2.5 cursor-pointer border-b border-[#E3E1DA]';
                 header.onclick = () => {
                     const content = document.getElementById('completed-tasks-container');
                     const icon = document.getElementById('completed-toggle-icon');
@@ -873,14 +865,14 @@
                     localStorage.setItem(`completedCollapsed_${currentListId}`, currentlyHidden);
                 };
                 header.innerHTML = `
-                    <i id="completed-toggle-icon" class="fas fa-chevron-down text-[10px] text-slate-400 transition-transform ${isCollapsed ? '-rotate-90' : ''}"></i>
-                    <span class="text-[13px] font-bold text-slate-500">완료됨 (${completedTasks.length})</span>
+                    <i id="completed-toggle-icon" class="fas fa-chevron-down text-[9px] text-[#9B9790] transition-transform ${isCollapsed ? '-rotate-90' : ''}"></i>
+                    <span class="text-[12px] font-medium text-[#9B9790]">완료됨 (${completedTasks.length})</span>
                 `;
                 container.appendChild(header);
 
                 const completedContainer = document.createElement('div');
                 completedContainer.id = 'completed-tasks-container';
-                completedContainer.className = `space-y-3 ${isCollapsed ? 'hidden' : ''}`;
+                completedContainer.className = `${isCollapsed ? 'hidden' : ''}`;
                 completedTasks.forEach(task => {
                     completedContainer.appendChild(createTaskCard(task, today, tomorrow, yesterday, endOfWeek));
                 });
@@ -889,120 +881,99 @@
         }
 
         function createTaskCard(task, today, tomorrow, yesterday, endOfWeek) {
-                const card = document.createElement('div');
-                card.id = `task-${task.id}`;
+            const card = document.createElement('div');
+            card.id = `task-${task.id}`;
 
-                const isImportant = task.importance === 'high';
-                const isCompleted = task.status === 'completed';
-                const dueDate = parseDate(task.due_date);
+            const isImportant = task.importance === 'high';
+            const isCompleted = task.status === 'completed';
+            const dueDate = parseDate(task.due_date);
 
-                const isToday = dueDate && dueDate.getTime() === today.getTime();
-                const isTomorrow = dueDate && dueDate.getTime() === tomorrow.getTime();
-                const isYesterday = dueDate && dueDate.getTime() === yesterday.getTime();
-                const isOverdue = dueDate && dueDate.getTime() < today.getTime();
-                const isThisWeek = dueDate && !isToday && !isTomorrow && !isYesterday && !isOverdue && dueDate <= endOfWeek;
-                
-                let borderColor = 'border-slate-100';
-                let bgColor = 'bg-white';
-                let borderSize = 'border';
-                
-                if (isCompleted) {
-                    borderColor = 'border-slate-100';
-                    bgColor = 'bg-slate-50/50';
-                } else if (isImportant) {
-                    borderColor = 'border-amber-400';
-                    bgColor = 'bg-amber-50/30';
-                    borderSize = 'border-2';
-                } else if (isOverdue) {
-                    borderColor = 'border-rose-400 shadow-sm';
-                    bgColor = 'bg-rose-50/20';
-                    borderSize = 'border-[1.5px]';
-                } else if (isToday) {
-                    borderColor = 'border-emerald-400 shadow-sm';
-                    bgColor = 'bg-emerald-50/20';
-                    borderSize = 'border-[1.5px]';
-                } else if (isTomorrow) {
-                    borderColor = 'border-blue-400 shadow-sm';
-                    bgColor = 'bg-blue-50/10';
-                    borderSize = 'border-[1.5px]';
-                } else if (isThisWeek) {
-                    borderColor = 'border-sky-300';
-                    bgColor = 'bg-sky-50/5';
-                }
+            const isToday    = dueDate && dueDate.getTime() === today.getTime();
+            const isTomorrow = dueDate && dueDate.getTime() === tomorrow.getTime();
+            const isYesterday= dueDate && dueDate.getTime() === yesterday.getTime();
+            const isOverdue  = dueDate && dueDate.getTime() < today.getTime();
 
-                card.className = `group task-card ${bgColor} px-4 py-3 rounded-2xl ${borderSize} ${borderColor} flex flex-col transition-all ${isCompleted ? 'opacity-60' : ''}`;
-                
-                let subtasksHtml = '';
-                if (task.subtasks && task.subtasks.length > 0) {
-                    subtasksHtml = `
-                        <div class="mt-2 ml-10 space-y-1.5 border-l-2 border-slate-100 pl-4 py-1">
-                            ${task.subtasks.map(st => `
-                                <div class="flex items-center space-x-3 group/sub">
-                                    <input type="checkbox" ${st.isChecked ? 'checked' : ''} 
-                                           ${isCompleted ? 'disabled' : ''}
-                                           onchange="toggleSubtask('${task.list_id}', '${task.id}', '${st.id}', this.checked, this)"
-                                           class="w-3.5 h-3.5 rounded border-slate-400/60 text-blue-600 focus:ring-blue-500/30 cursor-pointer bg-white/50 hover:border-blue-500">
-                                    <span class="w-fit inline-block text-[12.5px] ${st.isChecked ? 'line-through text-slate-400 font-medium' : 'text-slate-600 font-semibold'} transition-all outline-none"
-                                          ${isCompleted ? '' : 'contenteditable="true"'}
-                                          onblur="updateSubtaskTitle('${task.list_id}', '${task.id}', '${st.id}', this)"
-                                          onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }">
-                                        ${st.displayName}
-                                    </span>
-                                </div>
-                            `).join('')}
-                        </div>
-                    `;
-                }
+            let extraClass = '';
+            if (!isCompleted) {
+                if (isImportant)  extraClass = 'important-task';
+                else if (isOverdue)  extraClass = 'overdue-task';
+                else if (isToday)    extraClass = 'today-task';
+                else if (isTomorrow) extraClass = 'tomorrow-task';
+            }
 
-                card.innerHTML = `
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0 mr-4">
-                            <div class="relative w-5 h-5">
-                                <input type="checkbox" ${isCompleted ? 'checked' : ''} onchange="completeTask('${task.list_id}', '${task.id}')"
-                                       class="peer appearance-none w-5 h-5 rounded-full border-2 border-slate-400/50 hover:border-blue-500 checked:bg-blue-500 checked:border-blue-500 transition-all cursor-pointer shadow-sm bg-white/50">
-                                <i class="fas fa-check absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[9px] text-white opacity-0 peer-checked:opacity-100 pointer-events-none"></i>
+            card.className = `group task-card px-4 py-2.5 flex flex-col ${extraClass} ${isCompleted ? 'opacity-60' : ''}`;
+
+            const dateColor = isOverdue ? 'text-[#C04038]' : isToday ? 'text-[#367A52]' : isTomorrow ? 'text-[#3A6FBF]' : 'text-[#9B9790]';
+
+            let subtasksHtml = '';
+            if (task.subtasks && task.subtasks.length > 0) {
+                subtasksHtml = `
+                    <div class="mt-1.5 ml-7 space-y-1 border-l border-[#E3E1DA] pl-3 py-0.5">
+                        ${task.subtasks.map(st => `
+                            <div class="flex items-center space-x-2.5 group/sub min-w-0">
+                                <input type="checkbox" ${st.isChecked ? 'checked' : ''}
+                                       ${isCompleted ? 'disabled' : ''}
+                                       onchange="toggleSubtask('${task.list_id}', '${task.id}', '${st.id}', this.checked, this)"
+                                       class="w-3 h-3 rounded-sm border border-[#C8C5BC] cursor-pointer accent-[#C96442] flex-shrink-0">
+                                <span class="flex-1 min-w-0 truncate text-[12px] ${st.isChecked ? 'line-through text-[#9B9790]' : 'text-[#5C5751] font-medium'} transition-all outline-none"
+                                      ${isCompleted ? '' : 'contenteditable="true"'}
+                                      onblur="updateSubtaskTitle('${task.list_id}', '${task.id}', '${st.id}', this)"
+                                      onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }">
+                                    ${st.displayName}
+                                </span>
                             </div>
-                        </div>
-                        <div class="flex-grow min-w-0 flex items-center justify-between">
-                            <div class="flex items-center space-x-2 min-w-0">
-                                <h3 class="w-fit inline-block text-[14.5px] font-bold text-slate-700 group-hover:text-blue-900 transition-colors outline-none truncate ${isCompleted ? 'line-through text-slate-400' : ''}"
-                                    ${isCompleted ? '' : 'contenteditable="true"'}
-                                    onblur="updateTaskTitle('${task.list_id}', '${task.id}', this)"
-                                    onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }">
-                                    ${task.title}
-                                </h3>
-                                <button onclick="toggleImportance('${task.list_id}', '${task.id}', '${task.importance}')" 
-                                        ${isCompleted ? 'disabled' : ''}
-                                        class="star-btn flex-shrink-0 focus:outline-none transition-all">
-                                    ${isImportant ? 
-                                        '<i class="fas fa-star text-amber-500 text-sm"></i>' : 
-                                        '<i class="far fa-star text-amber-400 text-[13px] opacity-0 group-hover:opacity-100 transition-opacity"></i>'}
-                                </button>
-                            </div>
-                            
-                            <div class="flex-shrink-0 ml-4 flex items-center">
-                                ${task.due_date ? `
-                                    <button onclick="${isCompleted ? '' : `showDueDateMenu(this, '${task.list_id}', '${task.id}', '${task.due_date}')`}" class="text-[11px] font-semibold px-2 py-1 rounded-lg hover:bg-slate-100 transition-all ${isOverdue ? 'text-rose-500 bg-rose-50/50' : (isToday ? 'text-emerald-600 bg-emerald-50/50' : (isTomorrow ? 'text-blue-600 bg-blue-50/50' : 'text-slate-400'))}">
-                                        <i class="far fa-calendar-check mr-1 opacity-60"></i>
-                                        ${formatDate(task.due_date)}
-                                    </button>` : `
-                                    ${isCompleted ? '' : `
-                                    <button onclick="showDueDateMenu(this, '${task.list_id}', '${task.id}')" class="due-date-btn text-[10px] font-black uppercase tracking-tighter text-slate-300 hover:text-blue-500 bg-slate-50 px-2 py-1 rounded-lg border border-slate-100 transition-all">
-                                        기한 추가
-                                    </button>`}
-                                `}
-                                ${(!currentListId || currentListId.startsWith('group_')) && task.list_name ? `
-                                    <span class="ml-2 px-1.5 py-0.5 bg-slate-100/80 text-slate-500 text-[10px] font-bold rounded hidden md:flex items-center whitespace-nowrap" title="${task.list_name}">
-                                        <i class="fas fa-list-ul mr-1 text-[8px] opacity-60"></i>
-                                        <span>${task.list_name}</span>
-                                    </span>
-                                ` : ''}
-                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+
+            card.innerHTML = `
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 mr-3">
+                        <div class="relative w-4 h-4">
+                            <input type="checkbox" ${isCompleted ? 'checked' : ''} onchange="completeTask('${task.list_id}', '${task.id}')"
+                                   class="peer appearance-none w-4 h-4 rounded-sm border border-[#C8C5BC] hover:border-[#C96442] checked:bg-[#C96442] checked:border-[#C96442] transition-all cursor-pointer">
+                            <i class="fas fa-check absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[7px] text-white opacity-0 peer-checked:opacity-100 pointer-events-none"></i>
                         </div>
                     </div>
-                    ${subtasksHtml}
-                `;
-                return card;
+                    <div class="flex-grow min-w-0 flex items-center justify-between">
+                        <div class="flex items-center space-x-1.5 min-w-0 flex-1">
+                            <h3 class="min-w-0 text-[13.5px] font-medium text-[#1A1917] outline-none truncate ${isCompleted ? 'line-through text-[#9B9790]' : ''}"
+                                ${isCompleted ? '' : 'contenteditable="true"'}
+                                onblur="updateTaskTitle('${task.list_id}', '${task.id}', this)"
+                                onkeydown="if(event.key === 'Enter') { event.preventDefault(); this.blur(); }">
+                                ${task.title}
+                            </h3>
+                            <button onclick="toggleImportance('${task.list_id}', '${task.id}', '${task.importance}')"
+                                    ${isCompleted ? 'disabled' : ''}
+                                    class="star-btn flex-shrink-0 focus:outline-none transition-all">
+                                ${isImportant ?
+                                    '<i class="fas fa-star text-[#A67530] text-xs"></i>' :
+                                    '<i class="far fa-star text-[#A67530] text-xs opacity-0 group-hover:opacity-50 transition-opacity"></i>'}
+                            </button>
+                        </div>
+
+                        <div class="flex-shrink-0 ml-3 flex items-center gap-1.5">
+                            ${task.due_date ? `
+                                <button onclick="${isCompleted ? '' : `showDueDateMenu(this, '${task.list_id}', '${task.id}', '${task.due_date}')`}" class="text-[11px] font-medium px-1.5 py-0.5 rounded hover:bg-[#F0EFE9] transition-all ${dateColor}">
+                                    <i class="far fa-calendar mr-0.5 text-[10px] opacity-70"></i>${formatDate(task.due_date)}
+                                </button>` : `
+                                ${isCompleted ? '' : `
+                                <button onclick="showDueDateMenu(this, '${task.list_id}', '${task.id}')" class="due-date-btn text-[10px] font-medium text-[#9B9790] hover:text-[#C96442] px-1.5 py-0.5 rounded border border-transparent hover:border-[#E3E1DA] transition-all">
+                                    기한
+                                </button>`}
+                            `}
+                            ${(!currentListId || currentListId.startsWith('group_')) && task.list_name ? `
+                                <span class="px-1.5 py-0.5 bg-[#F0EFE9] text-[#9B9790] text-[10px] rounded hidden md:flex items-center whitespace-nowrap">
+                                    ${task.list_name}
+                                </span>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+                ${subtasksHtml}
+            `;
+            return card;
         }
 
         async function setDueDate(listId, taskId, date) {
@@ -1080,7 +1051,7 @@
         async function addTask() {
             const input = document.getElementById('task-input');
             const title = input.value.trim();
-            if (!title || isProcessing) return;
+            if (!title || isProcessing || !currentListId || currentListId.startsWith('group_')) return;
             isProcessing = true;
             input.disabled = true;
             try {
@@ -1090,7 +1061,7 @@
                     body: JSON.stringify({ title: title, list_id: currentListId })
                 });
                 if (response.ok) { input.value = ''; await fetchTasks(); }
-            } finally { input.disabled = false; isProcessing = false; input.focus(); }
+            } finally { isProcessing = false; updateTaskInputState(); input.focus(); }
         }
 
         async function completeTask(listId, taskId) {
@@ -1166,69 +1137,23 @@
                 const minutes = String(now.getMinutes()).padStart(2, '0');
                 const seconds = String(now.getSeconds()).padStart(2, '0');
                 const timeString = `${month}월 ${date}일 (${day}) ${hours}:${minutes}:${seconds}`;
-                
+
                 const desktopClock = document.getElementById('desktop-clock');
                 const mobileClock = document.getElementById('mobile-clock');
                 if (desktopClock) desktopClock.innerText = timeString;
                 if (mobileClock) mobileClock.innerText = timeString;
+
+                const wTime = document.getElementById('widget-time');
+                const wDate = document.getElementById('widget-date');
+                if (wTime) wTime.textContent = `${hours}:${minutes}:${seconds}`;
+                if (wDate) wDate.textContent = `${month}월 ${date}일 (${day})`;
             }
             setInterval(updateClock, 1000);
             updateClock();
         }
 
         function initBackgroundBySun() {
-            // Check background animation setting
-            const bgAnimate = localStorage.getItem('bgAnimate') !== 'false';
-            const bgContainer = document.querySelector('.bg-animate');
-            if (!bgAnimate) {
-                bgContainer.classList.add('hidden-blobs');
-            } else {
-                bgContainer.classList.remove('hidden-blobs');
-            }
-
-            const lat = 37.5665, lng = 126.9780;
-            fetch(`https://api.sunrise-sunset.org/json?lat=${lat}&lng=${lng}&formatted=0`)
-                .then(res => res.json())
-                .then(data => {
-                    const now = new Date();
-                    const sunrise = new Date(data.results.sunrise);
-                    const sunset = new Date(data.results.sunset);
-                    
-                    const bg = document.querySelector('.bg-animate');
-                    const blob1 = document.querySelector('.blob:not(.blob-2):not(.blob-3)');
-                    const blob2 = document.querySelector('.blob-2');
-                    const blob3 = document.querySelector('.blob-3');
-
-                    let bgGrad = 'linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%)';
-                    let c1 = '59, 130, 246';
-                    let c2 = '99, 102, 241';
-                    let c3 = '37, 99, 235';
-
-                    const oneHour = 60 * 60 * 1000;
-                    
-                    if (now >= new Date(sunset.getTime() + oneHour) || now <= new Date(sunrise.getTime() - oneHour)) {
-                        bgGrad = 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)';
-                        c1 = '49, 46, 129';
-                        c2 = '30, 58, 138';
-                        c3 = '88, 28, 135';
-                    } else if (Math.abs(now - sunrise) <= oneHour) {
-                        bgGrad = 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)';
-                        c1 = '249, 115, 22';
-                        c2 = '234, 88, 12';
-                        c3 = '250, 204, 21';
-                    } else if (Math.abs(now - sunset) <= oneHour) {
-                        bgGrad = 'linear-gradient(135deg, #fdf4ff 0%, #fae8ff 100%)';
-                        c1 = '217, 70, 239';
-                        c2 = '244, 63, 94';
-                        c3 = '147, 51, 234';
-                    }
-                    
-                    if(bg) bg.style.background = bgGrad;
-                    if(blob1) blob1.style.background = `radial-gradient(circle, rgba(${c1}, 0.15) 0%, rgba(${c1}, 0) 70%)`;
-                    if(blob2) blob2.style.background = `radial-gradient(circle, rgba(${c2}, 0.12) 0%, rgba(${c2}, 0) 70%)`;
-                    if(blob3) blob3.style.background = `radial-gradient(circle, rgba(${c3}, 0.1) 0%, rgba(${c3}, 0) 70%)`;
-                })
-                .catch(err => console.error('Failed to fetch sun times', err));
+            // Background animation setting is no longer used (flat design)
         }
 
         async function initWeatherEffect() {
@@ -1252,7 +1177,7 @@
                 const data = await resp.json();
                 const condition = data.current_condition[0];
                 const code = parseInt(condition.weatherCode);
-                
+
                 // Weather Code Groups (WWO)
                 const clearCodes = [113];
                 const partlyCloudyCodes = [116];
@@ -1263,14 +1188,14 @@
                 const thunderCodes = [200, 386, 389];
 
                 if (thunderCodes.includes(code)) {
-                    createParticles('rain', 50);
+                    createParticles('storm-rain', 60);
                     cloudOverlay.classList.add('active', 'heavy');
                     initThunder();
                 } else if (rainCodes.includes(code)) {
-                    createParticles('rain', 40);
+                    createParticles('rain', 70);
                     cloudOverlay.classList.add('active', 'heavy');
                 } else if (snowCodes.includes(code)) {
-                    createParticles('snow', 30);
+                    createParticles('snow', 55);
                     cloudOverlay.classList.add('active', 'heavy');
                 } else if (mistCodes.includes(code)) {
                     mistOverlay.classList.add('active');
@@ -1280,10 +1205,33 @@
                     cloudOverlay.classList.add('active');
                 } else if (clearCodes.includes(code)) {
                     sunGlare.classList.add('active');
-                    createSparkles(15);
+                    createSparkles(30);
                 }
+
+                // Update side widget
+                const iconMap = {
+                    clear: '☀️', partly: '⛅', cloudy: '☁️',
+                    mist: '🌫️', rain: '🌧️', snow: '❄️', thunder: '⛈️'
+                };
+                let wType = 'partly';
+                if (thunderCodes.includes(code)) wType = 'thunder';
+                else if (rainCodes.includes(code)) wType = 'rain';
+                else if (snowCodes.includes(code)) wType = 'snow';
+                else if (mistCodes.includes(code)) wType = 'mist';
+                else if (cloudyCodes.includes(code)) wType = 'cloudy';
+                else if (clearCodes.includes(code)) wType = 'clear';
+
+                const descMap = { clear: '맑음', partly: '구름 조금', cloudy: '흐림', mist: '안개', rain: '비', snow: '눈', thunder: '폭풍' };
+                const wIcon = document.getElementById('widget-icon');
+                const wTemp = document.getElementById('widget-temp');
+                const wDesc = document.getElementById('widget-desc');
+                if (wIcon) wIcon.textContent = iconMap[wType];
+                if (wTemp) wTemp.textContent = `${condition.temp_C}°C`;
+                if (wDesc) wDesc.textContent = descMap[wType];
             } catch (err) {
                 console.error('Weather fetch failed', err);
+                const wDesc = document.getElementById('widget-desc');
+                if (wDesc) wDesc.textContent = '날씨 정보 없음';
             }
         }
 
@@ -1304,26 +1252,31 @@
         function initThunder() {
             const flash = document.querySelector('.thunder-flash');
             window.thunderInterval = setInterval(() => {
-                if (Math.random() > 0.8) {
+                if (Math.random() > 0.6) {
                     flash.classList.add('flash-active');
-                    setTimeout(() => flash.classList.remove('flash-active'), 600);
+                    setTimeout(() => flash.classList.remove('flash-active'), 700);
                 }
-            }, 5000);
+            }, 3000);
         }
 
         function createParticles(type, count) {
             const layer = document.getElementById('weather-layer');
+            const stormAnims = ['fall-storm-1', 'fall-storm-2', 'fall-storm-3'];
             for (let i = 0; i < count; i++) {
                 const p = document.createElement('div');
                 p.className = type;
-                p.style.left = Math.random() * 100 + 'vw';
-                p.style.animationDuration = (Math.random() * 1 + (type === 'rain' ? 0.5 : 2)) + 's';
-                p.style.animationDelay = Math.random() * 2 + 's';
+                p.style.left = Math.random() * 110 + 'vw';
+                const isRainType = type === 'rain' || type === 'storm-rain';
+                p.style.animationDuration = (Math.random() * 0.8 + (isRainType ? 0.4 : 2)) + 's';
+                p.style.animationDelay = (Math.random() * 3 - 1) + 's';
+                if (type === 'storm-rain') {
+                    p.style.animationName = stormAnims[Math.floor(Math.random() * 3)];
+                }
                 if (type === 'snow') {
-                    const size = Math.random() * 4 + 2 + 'px';
+                    const size = Math.random() * 5 + 3 + 'px';
                     p.style.width = size;
                     p.style.height = size;
-                    p.style.opacity = Math.random() * 0.5 + 0.3;
+                    p.style.opacity = Math.random() * 0.5 + 0.5;
                 }
                 layer.appendChild(p);
             }

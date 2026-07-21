@@ -9,193 +9,357 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
     <style>
-        body { 
-            font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, Roboto, "Helvetica Neue", "Segoe UI", "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
-            background-color: #f8fafc; 
+        body {
+            font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+            background-color: #F7F6F2;
             -webkit-font-smoothing: antialiased;
         }
+        #preview-layer {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 0;
+        }
+        .rain {
+            position: absolute;
+            background: linear-gradient(to bottom, rgba(100, 150, 220, 0.0), rgba(100, 150, 230, 0.7));
+            width: 2px; height: 20px; top: -20px;
+            border-radius: 0 0 2px 2px;
+            animation: fall linear infinite;
+        }
+        .storm-rain {
+            position: absolute;
+            background: linear-gradient(to bottom, rgba(80, 120, 210, 0.0), rgba(80, 120, 210, 0.8));
+            width: 2px; height: 22px; top: -25px;
+            border-radius: 0 0 2px 2px;
+            animation: fall-storm-2 linear infinite;
+        }
+        .snow {
+            position: absolute;
+            background: rgba(200, 225, 255, 0.85);
+            border-radius: 50%; top: -10px;
+            box-shadow: 0 0 3px rgba(180, 210, 255, 0.5);
+            animation: fall linear infinite;
+        }
+        @keyframes fall { to { transform: translateY(110vh); } }
+        @keyframes fall-storm-1 {
+            from { transform: translateY(-25px) translateX(0); }
+            to   { transform: translateY(110vh) translateX(20px); }
+        }
+        @keyframes fall-storm-2 {
+            from { transform: translateY(-25px) translateX(0); }
+            to   { transform: translateY(110vh) translateX(38px); }
+        }
+        @keyframes fall-storm-3 {
+            from { transform: translateY(-25px) translateX(0); }
+            to   { transform: translateY(110vh) translateX(55px); }
+        }
+        .sparkle {
+            position: absolute;
+            background: rgba(255, 210, 80, 0.6); border-radius: 50%;
+            opacity: 0; animation: sparkle-anim 3s infinite linear;
+        }
+        @keyframes sparkle-anim {
+            0%, 100% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1); opacity: 0.7; }
+        }
+        .cloud-overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(160, 155, 148, 0.14);
+            opacity: 0; transition: opacity 2s ease;
+        }
+        .cloud-overlay.active { opacity: 1; }
+        .cloud-overlay.heavy { background: rgba(110, 105, 98, 0.20); }
+        .mist-overlay {
+            position: absolute; bottom: 0; left: 0; width: 100%; height: 65%;
+            background: linear-gradient(to top, rgba(235,233,228,0.72) 0%, rgba(235,233,228,0.15) 60%, rgba(235,233,228,0) 100%);
+            opacity: 0; transition: opacity 3s ease;
+        }
+        .mist-overlay.active { opacity: 1; }
+        .sun-glare {
+            position: absolute; top: 0; right: 0; width: 100%; height: 100%;
+            background: radial-gradient(ellipse 60% 55% at 85% 0%, rgba(255,210,80,0.22) 0%, rgba(255,190,60,0.10) 40%, rgba(200,160,80,0.03) 65%, transparent 100%);
+            opacity: 0; transition: opacity 2s ease;
+        }
+        .sun-glare.active { opacity: 1; animation: sun-pulse 5s ease-in-out infinite; }
+        @keyframes sun-pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        .thunder-flash {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: white; opacity: 0; z-index: 10;
+        }
+        .flash-active { animation: flash-anim 0.6s ease-out; }
+        @keyframes flash-anim {
+            0% { opacity: 0; } 8% { opacity: 0.35; } 16% { opacity: 0; } 24% { opacity: 0.45; } 100% { opacity: 0; }
+        }
+        .weather-btn {
+            display: flex; flex-direction: column; align-items: center; gap: 6px;
+            padding: 10px 8px; border: 1.5px solid #E3E1DA;
+            background: white; cursor: pointer; transition: all 0.15s;
+            flex: 1; min-width: 0;
+        }
+        .weather-btn:hover { border-color: #C96442; background: #FDF5F2; }
+        .weather-btn.active { border-color: #C96442; background: #FDF5F2; box-shadow: 0 0 0 2px rgba(201,100,66,0.15); }
+        .weather-btn .icon { font-size: 18px; line-height: 1; }
+        .weather-btn .label { font-size: 11px; font-weight: 600; color: #5C5751; white-space: nowrap; }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen">
-    <div class="max-w-xl mx-auto py-12 px-4">
-        <div class="mb-10">
-            <a href="/" class="group inline-flex items-center text-slate-400 hover:text-blue-600 transition-all mb-6">
-                <div class="w-8 h-8 rounded-full bg-white border border-slate-200 flex items-center justify-center mr-3 group-hover:border-blue-200 group-hover:shadow-sm transition-all">
-                    <i class="fas fa-chevron-left text-xs"></i>
-                </div>
-                <span class="font-semibold text-sm">대시보드로 돌아가기</span>
+<body class="min-h-screen">
+    <!-- Weather preview layer -->
+    <div id="preview-layer">
+        <div class="cloud-overlay"></div>
+        <div class="mist-overlay"></div>
+        <div class="sun-glare"></div>
+        <div class="thunder-flash"></div>
+    </div>
+    <div class="max-w-lg mx-auto py-10 px-4">
+        <div class="mb-8">
+            <a href="/" class="inline-flex items-center text-[#9B9790] hover:text-[#C96442] transition-colors mb-5 text-[13px] font-medium gap-1.5">
+                <i class="fas fa-chevron-left text-[10px]"></i>
+                <span>대시보드</span>
             </a>
-            <h1 class="text-3xl font-extrabold text-slate-800 tracking-tight">서비스 설정</h1>
-            <p class="text-slate-500 mt-2 font-medium">Microsoft To-Do API 연동 및 계정 연결을 관리합니다.</p>
+            <h1 class="text-xl font-bold text-[#1A1917]">설정</h1>
+            <p class="text-[#9B9790] text-[13px] mt-1">Microsoft To-Do API 연동 및 계정 연결</p>
         </div>
 
-        <!-- 1. 계정 연동 상태 카드 -->
-        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden mb-8">
-            <div class="p-8">
-                <div class="flex items-center justify-between mb-6">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-blue-500">
-                            <i class="fas fa-user-shield text-lg"></i>
-                        </div>
-                        <h2 class="text-lg font-bold text-slate-800">계정 연결 상태</h2>
-                    </div>
-                    {% if has_token %}
-                    <span class="flex items-center px-4 py-1.5 rounded-full bg-green-50 text-green-600 text-xs font-bold border border-green-100">
-                        <span class="w-2 h-2 rounded-full bg-green-500 mr-2 animate-pulse"></span> 연결됨
-                    </span>
-                    {% else %}
-                    <span class="flex items-center px-4 py-1.5 rounded-full bg-amber-50 text-amber-600 text-xs font-bold border border-amber-100">
-                        <span class="w-2 h-2 rounded-full bg-amber-500 mr-2"></span> 연결 필요
-                    </span>
-                    {% endif %}
+        <!-- 1. 계정 연동 상태 -->
+        <div class="bg-white border border-[#E3E1DA] mb-4">
+            <div class="px-5 py-4 border-b border-[#E3E1DA] flex items-center justify-between">
+                <div class="flex items-center gap-2.5">
+                    <i class="fas fa-user-shield text-[#9B9790] text-sm"></i>
+                    <h2 class="text-[13px] font-semibold text-[#1A1917]">계정 연결 상태</h2>
                 </div>
-
                 {% if has_token %}
-                <div class="bg-slate-50 rounded-2xl p-4 mb-8 border border-slate-100">
-                    <p class="text-sm text-slate-600 leading-relaxed font-medium">
-                        <i class="fas fa-info-circle mr-2 text-blue-400"></i>
-                        이미 Microsoft 계정이 연결되어 있습니다. 다시 연결하려면 아래 버튼을 클릭하세요.
-                    </p>
-                </div>
+                <span class="flex items-center gap-1.5 px-2.5 py-1 bg-[#EAF4EF] text-[#367A52] text-[11px] font-medium border border-[#C5E4D2]">
+                    <span class="w-1.5 h-1.5 rounded-full bg-[#367A52] animate-pulse"></span> 연결됨
+                </span>
                 {% else %}
-                <p class="text-sm text-slate-500 mb-8 font-medium">할 일 목록을 가져오려면 먼저 Microsoft 계정으로 로그인해야 합니다.</p>
+                <span class="flex items-center gap-1.5 px-2.5 py-1 bg-[#FBF4E6] text-[#A67530] text-[11px] font-medium border border-[#EDD8A0]">
+                    <span class="w-1.5 h-1.5 rounded-full bg-[#A67530]"></span> 연결 필요
+                </span>
+                {% endif %}
+            </div>
+            <div class="px-5 py-4">
+                {% if has_token %}
+                <p class="text-[12px] text-[#5C5751] mb-4">이미 Microsoft 계정이 연결되어 있습니다. 다시 연결하려면 아래 버튼을 클릭하세요.</p>
+                {% else %}
+                <p class="text-[12px] text-[#5C5751] mb-4">할 일 목록을 가져오려면 먼저 Microsoft 계정으로 로그인해야 합니다.</p>
                 {% endif %}
 
                 {% if client_id and client_secret %}
-                <a href="{{ url_for('auth_login') }}" 
-                   class="w-full inline-flex items-center justify-center px-6 py-4 bg-[#0078d4] hover:bg-[#005a9e] text-white font-bold rounded-2xl transition-all shadow-lg shadow-blue-500/20 active:scale-[0.98]">
-                    <i class="fab fa-microsoft mr-3 text-xl"></i>
+                <a href="{{ url_for('auth_login') }}"
+                   class="w-full inline-flex items-center justify-center px-5 py-2.5 bg-[#0078d4] hover:bg-[#005a9e] text-white font-medium text-[13px] transition-colors gap-2">
+                    <i class="fab fa-microsoft"></i>
                     Microsoft 계정으로 로그인
                 </a>
                 {% else %}
-                <div class="bg-slate-50 border border-slate-200 border-dashed rounded-2xl p-6 text-center">
-                    <i class="fas fa-lock text-slate-300 text-2xl mb-3"></i>
-                    <p class="text-sm text-slate-400 font-semibold">먼저 API 설정을 완료하세요.</p>
+                <div class="border border-dashed border-[#E3E1DA] p-5 text-center">
+                    <i class="fas fa-lock text-[#9B9790] text-lg mb-2 block"></i>
+                    <p class="text-[12px] text-[#9B9790]">먼저 API 설정을 완료하세요.</p>
                 </div>
                 {% endif %}
             </div>
         </div>
 
-        <!-- 2. UI 커스터마이징 -->
-        <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden mb-8">
-            <div class="p-8">
-                <div class="flex items-center space-x-3 mb-8">
-                    <div class="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-500">
-                        <i class="fas fa-magic text-lg"></i>
+        <!-- 2. UI 설정 -->
+        <div class="bg-white border border-[#E3E1DA] mb-4">
+            <div class="px-5 py-4 border-b border-[#E3E1DA] flex items-center gap-2.5">
+                <i class="fas fa-sliders-h text-[#9B9790] text-sm"></i>
+                <h2 class="text-[13px] font-semibold text-[#1A1917]">화면 설정</h2>
+            </div>
+            <div class="divide-y divide-[#E3E1DA]">
+                <div class="px-5 py-3.5 flex items-center justify-between">
+                    <div>
+                        <h3 class="text-[13px] font-medium text-[#1A1917]">날씨 효과</h3>
+                        <p class="text-[11px] text-[#9B9790] mt-0.5">서울의 날씨에 따라 눈·비 효과 표시</p>
                     </div>
-                    <h2 class="text-lg font-bold text-slate-800">화면 스타일 설정</h2>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" id="toggle-weather-effect" class="sr-only peer" checked>
+                        <div class="w-9 h-5 bg-[#E3E1DA] peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-[#C8C5BC] after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#C96442]"></div>
+                    </label>
                 </div>
-
-                <div class="space-y-6">
-                    <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                        <div>
-                            <h3 class="text-sm font-bold text-slate-700">배경 애니메이션</h3>
-                            <p class="text-[11px] text-slate-500 font-medium">배경의 움직이는 블롭 효과를 활성화합니다.</p>
-                        </div>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="toggle-bg-animate" class="sr-only peer" checked>
-                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
-                        </label>
-                    </div>
-
-                    <div class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                        <div>
-                            <h3 class="text-sm font-bold text-slate-700">실시간 날씨 효과</h3>
-                            <p class="text-[11px] text-slate-500 font-medium">서울의 실시간 날씨에 맞춰 눈, 비 등의 효과를 표시합니다.</p>
-                        </div>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" id="toggle-weather-effect" class="sr-only peer" checked>
-                            <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
-                        </label>
+                <div class="px-5 py-4 border-t border-[#E3E1DA]">
+                    <p class="text-[11px] font-semibold text-[#9B9790] uppercase tracking-wider mb-3">날씨 효과 미리보기</p>
+                    <div class="flex gap-2 flex-wrap">
+                        <button class="weather-btn" onclick="previewWeather('clear')" id="wb-clear">
+                            <span class="icon">☀️</span><span class="label">맑음</span>
+                        </button>
+                        <button class="weather-btn" onclick="previewWeather('partly')" id="wb-partly">
+                            <span class="icon">⛅</span><span class="label">구름조금</span>
+                        </button>
+                        <button class="weather-btn" onclick="previewWeather('cloudy')" id="wb-cloudy">
+                            <span class="icon">☁️</span><span class="label">흐림</span>
+                        </button>
+                        <button class="weather-btn" onclick="previewWeather('mist')" id="wb-mist">
+                            <span class="icon">🌫️</span><span class="label">안개</span>
+                        </button>
+                        <button class="weather-btn" onclick="previewWeather('rain')" id="wb-rain">
+                            <span class="icon">🌧️</span><span class="label">비</span>
+                        </button>
+                        <button class="weather-btn" onclick="previewWeather('snow')" id="wb-snow">
+                            <span class="icon">❄️</span><span class="label">눈</span>
+                        </button>
+                        <button class="weather-btn" onclick="previewWeather('thunder')" id="wb-thunder">
+                            <span class="icon">⛈️</span><span class="label">폭풍</span>
+                        </button>
+                        <button class="weather-btn" onclick="previewWeather('none')" id="wb-none">
+                            <span class="icon">✕</span><span class="label">효과 끄기</span>
+                        </button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 3. API 상세 설정 -->
-        <details class="group bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
-            <summary class="list-none p-8 cursor-pointer flex items-center justify-between hover:bg-slate-50 transition-colors">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 group-open:bg-blue-50 group-open:text-blue-500 transition-colors">
-                        <i class="fas fa-key text-lg"></i>
-                    </div>
-                    <h2 class="text-lg font-bold text-slate-800">API 고급 설정</h2>
+        <!-- 3. API 설정 -->
+        <details class="group bg-white border border-[#E3E1DA] mb-4">
+            <summary class="list-none px-5 py-4 cursor-pointer flex items-center justify-between hover:bg-[#F0EFE9] transition-colors">
+                <div class="flex items-center gap-2.5">
+                    <i class="fas fa-key text-[#9B9790] text-sm"></i>
+                    <h2 class="text-[13px] font-semibold text-[#1A1917]">API 고급 설정</h2>
                 </div>
-                <span class="w-8 h-8 rounded-full flex items-center justify-center text-slate-300 transition-transform group-open:rotate-180 group-open:text-blue-500">
-                    <i class="fas fa-chevron-down text-xs"></i>
-                </span>
+                <i class="fas fa-chevron-down text-[10px] text-[#9B9790] transition-transform group-open:rotate-180"></i>
             </summary>
-            <div class="px-8 pb-8 pt-2">
-                <form method="POST" class="space-y-6">
+            <div class="px-5 pb-5 pt-1 border-t border-[#E3E1DA]">
+                <form method="POST" class="space-y-4 mt-3">
                     <div>
-                        <label for="client_id" class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider ml-1">Application (client) ID</label>
-                        <div class="relative">
-                            <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300">
-                                <i class="fas fa-fingerprint"></i>
-                            </div>
-                            <input type="text" id="client_id" name="client_id" value="{{ client_id }}" 
-                                   class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all text-sm font-mono font-medium"
-                                   placeholder="Azure AD Client ID"
-                                   required>
-                        </div>
+                        <label for="client_id" class="block text-[11px] font-semibold text-[#9B9790] mb-1.5 uppercase tracking-wider">Application (client) ID</label>
+                        <input type="text" id="client_id" name="client_id" value="{{ client_id }}"
+                               class="w-full px-3 py-2 bg-[#F7F6F2] border border-[#E3E1DA] focus:border-[#C96442] outline-none transition-colors text-[13px] font-mono text-[#1A1917]"
+                               placeholder="Azure AD Client ID" required>
                     </div>
                     <div>
-                        <label for="client_secret" class="block text-xs font-bold text-slate-500 mb-2 uppercase tracking-wider ml-1">Client Secret</label>
-                        <div class="relative">
-                            <div class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300">
-                                <i class="fas fa-shield-alt"></i>
-                            </div>
-                            <input type="password" id="client_secret" name="client_secret" value="{{ client_secret }}" 
-                                   class="w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 outline-none transition-all text-sm font-mono font-medium"
-                                   placeholder="Azure AD Client Secret"
-                                   required>
-                        </div>
+                        <label for="client_secret" class="block text-[11px] font-semibold text-[#9B9790] mb-1.5 uppercase tracking-wider">Client Secret</label>
+                        <input type="password" id="client_secret" name="client_secret" value="{{ client_secret }}"
+                               class="w-full px-3 py-2 bg-[#F7F6F2] border border-[#E3E1DA] focus:border-[#C96442] outline-none transition-colors text-[13px] font-mono text-[#1A1917]"
+                               placeholder="Azure AD Client Secret" required>
                     </div>
-                    <div class="bg-blue-50/50 rounded-2xl p-5 border border-blue-100/50">
-                        <h4 class="text-[11px] font-extrabold text-blue-700 mb-2 uppercase tracking-[0.1em] flex items-center">
-                            <i class="fas fa-lightbulb mr-2 opacity-70"></i> Azure Portal 가이드
-                        </h4>
-                        <p class="text-xs text-blue-600/80 leading-relaxed font-medium">
-                            Azure AD 앱 등록 시 <code class="bg-white/80 px-1.5 py-0.5 rounded border border-blue-100 font-bold text-blue-700">Tasks.ReadWrite</code> 권한이 필요합니다.
-                            Redirect URI는 <code>/auth/callback</code> 경로로 설정하세요.
+                    <div class="bg-[#EEF3FB] border border-[#C5D8F4] p-4">
+                        <p class="text-[11px] font-semibold text-[#3A6FBF] mb-1 uppercase tracking-wider">Azure Portal 가이드</p>
+                        <p class="text-[12px] text-[#3A6FBF] leading-relaxed">
+                            앱 등록 시 <code class="bg-white px-1.5 py-0.5 border border-[#C5D8F4] font-bold">Tasks.ReadWrite</code> 권한이 필요합니다.
+                            Redirect URI는 <code class="font-bold">/auth/callback</code>으로 설정하세요.
                         </p>
                     </div>
-                    <button type="submit" 
-                            class="w-full px-6 py-4 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-2xl transition-all shadow-lg shadow-slate-200 active:scale-[0.98]">
+                    <button type="submit"
+                            class="w-full px-5 py-2.5 bg-[#1A1917] hover:bg-[#2D2B28] text-white font-medium text-[13px] transition-colors">
                         <i class="fas fa-save mr-2"></i> API 설정 저장
                     </button>
                 </form>
             </div>
         </details>
-        
-        <div class="mt-12 text-center">
-            <p class="text-xs font-bold text-slate-300 uppercase tracking-widest">
+
+        <div class="mt-10 text-center">
+            <p class="text-[11px] font-medium text-[#9B9790] uppercase tracking-widest">
                 &copy; 2026 MS To Do Helper
             </p>
         </div>
     </div>
 
     <script>
+        let thunderPreviewInterval = null;
+
         document.addEventListener('DOMContentLoaded', () => {
-            const bgToggle = document.getElementById('toggle-bg-animate');
             const weatherToggle = document.getElementById('toggle-weather-effect');
-
-            // Load saved settings
-            const bgAnimate = localStorage.getItem('bgAnimate') !== 'false';
             const weatherEffect = localStorage.getItem('weatherEffect') !== 'false';
-
-            bgToggle.checked = bgAnimate;
             weatherToggle.checked = weatherEffect;
-
-            // Save settings on change
-            bgToggle.addEventListener('change', (e) => {
-                localStorage.setItem('bgAnimate', e.target.checked);
-            });
-
             weatherToggle.addEventListener('change', (e) => {
                 localStorage.setItem('weatherEffect', e.target.checked);
             });
         });
+
+        function clearPreview() {
+            const layer = document.getElementById('preview-layer');
+            layer.querySelectorAll('.rain, .snow, .sparkle').forEach(el => el.remove());
+            layer.querySelector('.cloud-overlay').classList.remove('active', 'heavy');
+            layer.querySelector('.mist-overlay').classList.remove('active');
+            layer.querySelector('.sun-glare').classList.remove('active');
+            if (thunderPreviewInterval) { clearInterval(thunderPreviewInterval); thunderPreviewInterval = null; }
+            document.querySelectorAll('.weather-btn').forEach(b => b.classList.remove('active'));
+        }
+
+        function createParticles(type, count) {
+            const layer = document.getElementById('preview-layer');
+            const stormAnims = ['fall-storm-1', 'fall-storm-2', 'fall-storm-3'];
+            for (let i = 0; i < count; i++) {
+                const p = document.createElement('div');
+                p.className = type;
+                p.style.left = Math.random() * 110 + 'vw';
+                const isRainType = type === 'rain' || type === 'storm-rain';
+                p.style.animationDuration = (Math.random() * 0.8 + (isRainType ? 0.4 : 2)) + 's';
+                p.style.animationDelay = (Math.random() * 3 - 1) + 's';
+                if (type === 'storm-rain') {
+                    p.style.animationName = stormAnims[Math.floor(Math.random() * 3)];
+                }
+                if (type === 'snow') {
+                    const size = Math.random() * 5 + 3 + 'px';
+                    p.style.width = size; p.style.height = size;
+                    p.style.opacity = Math.random() * 0.5 + 0.5;
+                }
+                layer.appendChild(p);
+            }
+        }
+
+        function createSparkles(count) {
+            const layer = document.getElementById('preview-layer');
+            for (let i = 0; i < count; i++) {
+                const s = document.createElement('div');
+                s.className = 'sparkle';
+                const size = Math.random() * 4 + 2 + 'px';
+                s.style.width = size; s.style.height = size;
+                s.style.left = Math.random() * 100 + 'vw';
+                s.style.top = Math.random() * 100 + 'vh';
+                s.style.animationDelay = Math.random() * 3 + 's';
+                layer.appendChild(s);
+            }
+        }
+
+        function previewWeather(type) {
+            clearPreview();
+            if (type === 'none') return;
+
+            const layer = document.getElementById('preview-layer');
+            const btn = document.getElementById('wb-' + type);
+            if (btn) btn.classList.add('active');
+
+            switch (type) {
+                case 'clear':
+                    layer.querySelector('.sun-glare').classList.add('active');
+                    createSparkles(30);
+                    break;
+                case 'partly':
+                    layer.querySelector('.cloud-overlay').classList.add('active');
+                    break;
+                case 'cloudy':
+                    layer.querySelector('.cloud-overlay').classList.add('active', 'heavy');
+                    break;
+                case 'mist':
+                    layer.querySelector('.mist-overlay').classList.add('active');
+                    layer.querySelector('.cloud-overlay').classList.add('active');
+                    break;
+                case 'rain':
+                    createParticles('rain', 70);
+                    layer.querySelector('.cloud-overlay').classList.add('active', 'heavy');
+                    break;
+                case 'snow':
+                    createParticles('snow', 55);
+                    layer.querySelector('.cloud-overlay').classList.add('active', 'heavy');
+                    break;
+                case 'thunder':
+                    createParticles('storm-rain', 60);
+                    layer.querySelector('.cloud-overlay').classList.add('active', 'heavy');
+                    const flash = layer.querySelector('.thunder-flash');
+                    thunderPreviewInterval = setInterval(() => {
+                        if (Math.random() > 0.6) {
+                            flash.classList.add('flash-active');
+                            setTimeout(() => flash.classList.remove('flash-active'), 700);
+                        }
+                    }, 3000);
+                    break;
+            }
+        }
     </script>
 </body>
 </html>
