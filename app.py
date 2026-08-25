@@ -475,6 +475,15 @@ def get_groups():
     return default_data
 
 def save_groups(data):
+    # Deduplicate list IDs within and across groups before persisting
+    seen_ids = set()
+    for group in data.get('groups', []):
+        deduped = []
+        for lid in group.get('lists', []):
+            if lid and lid not in seen_ids:
+                seen_ids.add(lid)
+                deduped.append(lid)
+        group['lists'] = deduped
     with open(GROUPS_FILE, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
