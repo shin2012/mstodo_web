@@ -272,7 +272,7 @@
 
         function clearPreview() {
             const layer = document.getElementById('preview-layer');
-            layer.querySelectorAll('.rain, .snow, .sparkle').forEach(el => el.remove());
+            layer.querySelectorAll('.rain, .snow, .sparkle, .storm-rain').forEach(el => el.remove());
             layer.querySelector('.cloud-overlay').classList.remove('active', 'heavy');
             layer.querySelector('.mist-overlay').classList.remove('active');
             layer.querySelector('.sun-glare').classList.remove('active');
