@@ -74,12 +74,8 @@ ensure_auth_initialized()
 
 @app.before_request
 def require_login():
-    if request.endpoint in ('login', 'static') or request.endpoint is None:
-        return
-    if not session.get('logged_in'):
-        if request.path.startswith('/api/'):
-            return jsonify({"error": "Not authenticated"}), 401
-        return redirect(url_for('login', next=request.path))
+    # Auth disabled — all routes are publicly accessible
+    return
 
 def load_token():
     config = get_config()
