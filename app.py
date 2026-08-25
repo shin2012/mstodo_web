@@ -9,6 +9,7 @@ from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 from flask import Flask, render_template, jsonify, request, redirect, url_for, session
 from werkzeug.middleware.proxy_fix import ProxyFix
+from werkzeug.security import generate_password_hash, check_password_hash
 from pymstodo import ToDoConnection
 import database
 
@@ -37,6 +38,48 @@ def get_config():
 def save_config(config):
     with open(CONFIG_FILE, 'w') as configfile:
         config.write(configfile)
+
+def get_auth_config():
+    config = get_config()
+    username = config.get('auth', 'username', fallback=None)
+    password_hash = config.get('auth', 'password_hash', fallback=None)
+    return username, password_hash
+
+def save_auth(username, password_hash):
+    config = get_config()
+    if not config.has_section('auth'):
+        config.add_section('auth')
+    config.set('auth', 'username', username)
+    config.set('auth', 'password_hash', password_hash)
+    save_config(config)
+
+def ensure_auth_initialized():
+    config = get_config()
+    changed = False
+    if not config.has_section('auth'):
+        config.add_section('auth')
+        changed = True
+    if not config.get('auth', 'username', fallback=None):
+        config.set('auth', 'username', 'admin')
+        changed = True
+    if not config.get('auth', 'password_hash', fallback=None):
+        default_password = secrets.token_urlsafe(9)
+        config.set('auth', 'password_hash', generate_password_hash(default_password))
+        changed = True
+        print(f"[INIT] No login credentials found. Created default account -> username: admin, password: {default_password}")
+    if changed:
+        save_config(config)
+
+ensure_auth_initialized()
+
+@app.before_request
+def require_login():
+    if request.endpoint in ('login', 'static') or request.endpoint is None:
+        return
+    if not session.get('logged_in'):
+        if request.path.startswith('/api/'):
+            return jsonify({"error": "Not authenticated"}), 401
+        return redirect(url_for('login', next=request.path))
 
 def load_token():
     config = get_config()
@@ -124,6 +167,36 @@ def get_todo_client():
         print(f"Error initializing client: {e}")
         return None
 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if session.get('logged_in'):
+        return redirect(url_for('index'))
+
+    error = None
+    info = '계정 정보가 변경되었습니다. 다시 로그인해주세요.' if request.args.get('changed') else None
+    username_input = ''
+
+    if request.method == 'POST':
+        username_input = request.form.get('username', '')
+        password = request.form.get('password', '')
+        stored_username, stored_hash = get_auth_config()
+        if stored_username and stored_hash and username_input == stored_username and check_password_hash(stored_hash, password):
+            session['logged_in'] = True
+            session['username'] = stored_username
+            next_url = request.args.get('next')
+            if next_url and next_url.startswith('/'):
+                return redirect(next_url)
+            return redirect(url_for('index'))
+        error = '아이디 또는 비밀번호가 올바르지 않습니다.'
+        info = None
+
+    return render_template('login.html', error=error, info=info, username=username_input)
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('login'))
+
 @app.route('/')
 def index():
     if not get_todo_client():
@@ -138,20 +211,47 @@ def index():
 @app.route('/settings', methods=['GET', 'POST'])
 def settings():
     config = get_config()
+    account_error = None
+
     if request.method == 'POST':
-        client_id = request.form.get('client_id')
-        client_secret = request.form.get('client_secret')
-        if client_id and client_secret:
-            config.set('connect', 'client_id', client_id)
-            config.set('connect', 'client_secret', client_secret)
-            save_config(config)
+        action = request.form.get('action', 'api')
+
+        if action == 'account':
+            stored_username, stored_hash = get_auth_config()
+            current_password = request.form.get('current_password', '')
+            new_username = request.form.get('new_username', '').strip()
+            new_password = request.form.get('new_password', '')
+            confirm_password = request.form.get('confirm_password', '')
+
+            if not stored_hash or not check_password_hash(stored_hash, current_password):
+                account_error = '현재 비밀번호가 올바르지 않습니다.'
+            elif not new_username:
+                account_error = '아이디를 입력하세요.'
+            elif new_password and new_password != confirm_password:
+                account_error = '새 비밀번호가 일치하지 않습니다.'
+            elif new_password and len(new_password) < 4:
+                account_error = '비밀번호는 4자 이상이어야 합니다.'
+            else:
+                updated_hash = generate_password_hash(new_password) if new_password else stored_hash
+                save_auth(new_username, updated_hash)
+                session.clear()
+                return redirect(url_for('login', changed=1))
+        else:
+            client_id = request.form.get('client_id')
+            client_secret = request.form.get('client_secret')
+            if client_id and client_secret:
+                config.set('connect', 'client_id', client_id)
+                config.set('connect', 'client_secret', client_secret)
+                save_config(config)
             return redirect(url_for('settings'))
 
     client_id = config.get('connect', 'client_id', fallback='')
     client_secret = config.get('connect', 'client_secret', fallback='')
     has_token = load_token() is not None
-    
-    return render_template('settings.html', client_id=client_id, client_secret=client_secret, has_token=has_token)
+    current_username, _ = get_auth_config()
+
+    return render_template('settings.html', client_id=client_id, client_secret=client_secret,
+                            has_token=has_token, current_username=current_username, account_error=account_error)
 
 @app.route('/auth/login')
 def auth_login():
