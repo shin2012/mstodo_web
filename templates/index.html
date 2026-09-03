@@ -263,6 +263,9 @@
                             <a href="/settings" class="w-7 h-7 flex items-center justify-center text-[#9B9790] hover:text-[#C96442] hover:bg-[#FAF0EB] rounded transition-all" title="설정">
                                 <i class="fas fa-cog text-sm"></i>
                             </a>
+                            <a href="javascript:void(0)" onclick="tinyauthLogout()" data-ts-logout="1" data-ts-size="28" class="w-7 h-7 flex items-center justify-center text-[#9B9790] hover:text-[#e53e3e] hover:bg-[#FFF5F5] rounded transition-all" title="로그아웃">
+                                <i class="fas fa-sign-out-alt text-sm"></i>
+                            </a>
                             <button onclick="toggleAddGroupPopup()" id="btn-add-group" class="w-7 h-7 flex items-center justify-center text-[#9B9790] hover:text-[#367A52] hover:bg-[#EAF4EF] rounded transition-all" title="그룹 추가">
                                 <i class="fas fa-folder-plus text-sm"></i>
                             </button>
@@ -1335,5 +1338,12 @@
             setInterval(initBackgroundBySun, 10 * 60 * 1000);
             setInterval(initWeatherEffect, 30 * 60 * 1000); // Update weather every 30 mins
         });    </script>
-</body>
+    <script>
+function tinyauthLogout() {
+  fetch('https://auth.b-612.kr/api/user/logout', {method:'POST',credentials:'include'})
+    .finally(() => { window.location.href = 'https://auth.b-612.kr/login'; });
+}
+</script>
+<script>window.addEventListener("pageshow",function(e){if(e.persisted)window.location.reload();});</script>
+<script src="/static/ts.js" defer></script></body>
 </html>
