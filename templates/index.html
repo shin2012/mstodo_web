@@ -1345,5 +1345,12 @@ function tinyauthLogout() {
 }
 </script>
 <script>window.addEventListener("pageshow",function(e){if(e.persisted)window.location.reload();});</script>
-<script src="/static/ts.js" defer></script></body>
+<script src="/static/ts.js" defer></script><script>
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/static/sw.js")
+    .then(r => r.update())
+    .catch(e => console.warn("SW registration failed:", e));
+}
+</script>
+</body>
 </html>

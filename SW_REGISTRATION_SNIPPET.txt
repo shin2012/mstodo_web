@@ -1,0 +1,7 @@
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/static/sw.js')
+    .then(r => r.update())
+    .catch(e => console.warn('SW registration failed:', e));
+}
+</script>
