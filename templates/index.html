@@ -6,6 +6,7 @@
     <title>할 일 | Microsoft To Do</title>
     <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
     <link rel="apple-touch-icon" href="{{ url_for('static', filename='apple-touch-icon.png') }}">
+    <link rel="manifest" href="/static/manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="할 일">
@@ -1352,5 +1353,6 @@ if ("serviceWorker" in navigator) {
     .catch(e => console.warn("SW registration failed:", e));
 }
 </script>
+<script src="/_push/client.js" data-app="todo" defer></script>
 </body>
 </html>
