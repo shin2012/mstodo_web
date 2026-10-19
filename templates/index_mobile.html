@@ -166,6 +166,40 @@
             padding: 10px;
             width: 168px;
         }
+
+        /* Toast Notification */
+        .toast-container {
+            position: fixed;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            pointer-events: none;
+        }
+        .toast {
+            background: #333;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            margin-bottom: 8px;
+            opacity: 0;
+            animation: toastIn 0.3s forwards;
+            pointer-events: auto;
+            font-weight: 500;
+        }
+        .toast.toast-error {
+            background: #dc2626;
+        }
+        .toast.toast-info {
+            background: #3b82f6;
+        }
+        @keyframes toastIn {
+            to { opacity: 1; }
+        }
+        @keyframes toastOut {
+            to { opacity: 0; }
+        }
         </style>
         </head>
         <body class="p-4 md:p-6">
@@ -321,6 +355,29 @@
     </div>
 
     <script>
+        // Toast notification system
+        function showToast(message, type = 'error', duration = 3000) {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.className = 'toast-container';
+                document.body.appendChild(container);
+            }
+            const toast = document.createElement('div');
+            toast.className = 'toast' + (type === 'error' ? ' toast-error' : type === 'info' ? ' toast-info' : '');
+            toast.textContent = message;
+            container.appendChild(toast);
+            setTimeout(() => {
+                toast.style.animation = 'toastOut 0.3s forwards';
+                setTimeout(() => toast.remove(), 300);
+            }, duration);
+        }
+
+        // Online/offline listeners
+        window.addEventListener('offline', () => showToast('인터넷 연결이 끊어졌습니다.', 'error', 5000));
+        window.addEventListener('online', () => showToast('인터넷에 다시 연결되었습니다.', 'info', 3000));
+
         let currentListId = null;
         let isProcessing = false;
         let cachedTasks = [];
@@ -361,7 +418,10 @@
                 
                 // Trigger initial sync for lists and tasks in the background
                 triggerSync();
-            } catch (err) { console.error('Failed to fetch lists or groups', err); }
+            } catch (err) {
+                console.error('Failed to fetch lists or groups', err);
+                showToast('목록을 불러올 수 없습니다');
+            }
         }
 
         function renderSidebar() {
@@ -721,6 +781,7 @@
                 }
             } catch (err) {
                 console.error('Sync failed', err);
+                showToast('동기화에 실패했습니다');
             } finally {
                 icons.forEach(i => i && i.classList.remove('fa-spin'));
             }
@@ -759,7 +820,8 @@
                 }
             } catch (err) { 
                 if (loadingTimeout) clearTimeout(loadingTimeout);
-                console.error(err); 
+                console.error(err);
+                showToast('작업 목록을 불러올 수 없습니다');
             } 
             finally {
                 loading.classList.add('hidden');
@@ -951,7 +1013,11 @@
                     body: JSON.stringify({ due_date: date })
                 });
                 if (response.ok) fetchTasks(true);
-            } catch (err) { console.error(err); }
+                else showToast('날짜 변경에 실패했습니다');
+            } catch (err) {
+                console.error(err);
+                showToast('날짜 변경에 실패했습니다');
+            }
         }
 
         async function updateSubtaskTitle(listId, taskId, subtaskId, element) {
@@ -964,7 +1030,10 @@
                     body: JSON.stringify({ title: newTitle })
                 });
                 if (!response.ok) throw new Error('Update failed');
-            } catch (err) { console.error(err); alert('서브태스크 수정 중 오류가 발생했습니다.'); }
+            } catch (err) {
+                console.error(err);
+                showToast('하위 작업 수정에 실패했습니다');
+            }
         }
 
         async function toggleSubtask(listId, taskId, subtaskId, checked, element) {
@@ -986,7 +1055,7 @@
             } catch (err) {
                 element.checked = !checked;
                 toggleSubtask(listId, taskId, subtaskId, !checked, element);
-                alert('서브태스크 업데이트 중 오류가 발생했습니다.');
+                showToast('하위 작업 변경에 실패했습니다');
             }
         }
 
@@ -1028,6 +1097,10 @@
                     body: JSON.stringify({ title: title, list_id: currentListId })
                 });
                 if (response.ok) { input.value = ''; await fetchTasks(); }
+                else showToast('작업 추가에 실패했습니다');
+            } catch (err) {
+                console.error(err);
+                showToast('작업 추가에 실패했습니다');
             } finally { isProcessing = false; updateTaskInputState(); input.focus(); }
         }
 
@@ -1054,8 +1127,15 @@
                         fetchTasks(true);
                     }
                 } else { throw new Error('Fail'); }
-            } catch (err) { 
-                fetchTasks(true);
+            } catch (err) {
+                console.error(err);
+                showToast('작업 완료 처리에 실패했습니다');
+                // Revert UI
+                if (!isCurrentlyCompleted) {
+                    card.classList.remove('completed', 'fade-out');
+                } else {
+                    card.classList.add('opacity-60');
+                }
             }
         }
 
@@ -1068,7 +1148,10 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ title: newTitle })
                 });
-            } catch (err) { console.error(err); }
+            } catch (err) {
+                console.error(err);
+                showToast('제목 수정에 실패했습니다');
+            }
         }
 
         async function toggleImportance(listId, taskId, currentImportance) {
@@ -1086,6 +1169,8 @@
                 });
                 if (!response.ok) throw new Error('Fail');
             } catch (err) {
+                console.error(err);
+                showToast('중요도 변경에 실패했습니다');
                 if (taskIndex !== -1) {
                     cachedTasks[taskIndex].importance = currentImportance;
                     sortAndRenderTasks();

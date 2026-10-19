@@ -1,7 +1,14 @@
+Add this <script> block to /app/templates/index.html (before </body> tag):
+
 <script>
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/static/sw.js')
-    .then(r => r.update())
-    .catch(e => console.warn('SW registration failed:', e));
+    .then(reg => console.log('Service Worker registered:', reg.scope))
+    .catch(err => console.log('Service Worker registration failed:', err));
 }
 </script>
+
+Note: When running in Docker, copy this file into the container with:
+  docker cp /home/yoseop/apps/mstodo_web/static/sw.js mstodo_web:/app/static/
+  
+Then manually add the <script> block to /app/templates/index.html inside the container, or use docker cp with a volume mount.
