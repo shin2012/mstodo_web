@@ -617,6 +617,44 @@ def handle_groups():
         return jsonify({"success": True})
     return jsonify(get_groups())
 
+@app.route('/api/subtask/add/<list_id>/<task_id>', methods=['POST'])
+def add_subtask(list_id, task_id):
+    token_data = get_refreshed_token()
+    if not token_data: return jsonify({"error": "Not authenticated"}), 401
+
+    data = request.json
+    title = data.get('title', '').strip() if isinstance(data.get('title'), str) else ''
+    if not title:
+        return jsonify({"error": "title is required"}), 400
+    if len(title) > 255:
+        return jsonify({"error": "title must be at most 255 characters"}), 400
+
+    try:
+        access_token = token_data.get('access_token')
+        headers = {
+            "Authorization": f"Bearer {access_token}",
+            "Content-Type": "application/json"
+        }
+        url = f"https://graph.microsoft.com/v1.0/me/todo/lists/{list_id}/tasks/{task_id}/checklistItems"
+        resp = requests.post(url, json={"displayName": title}, headers=headers)
+        if resp.status_code in [200, 201]:
+            new_item = resp.json()
+            # Update local DB
+            task = database.get_task_by_id(task_id)
+            if task:
+                subtasks = task.get('checklistItems', [])
+                subtasks.append({
+                    'id': new_item.get('id'),
+                    'displayName': new_item.get('displayName', title),
+                    'isChecked': new_item.get('isChecked', False),
+                })
+                database.update_task_local(task_id, checklist_items=subtasks)
+            return jsonify({"success": True, "item": new_item})
+        else:
+            return jsonify({"error": resp.text}), resp.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/api/subtask/update/<list_id>/<task_id>/<subtask_id>', methods=['PATCH'])
 def update_subtask(list_id, task_id, subtask_id):
     token_data = get_refreshed_token()

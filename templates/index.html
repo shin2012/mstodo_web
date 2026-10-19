@@ -1010,7 +1010,7 @@
             let subtasksHtml = '';
             if (task.subtasks && task.subtasks.length > 0) {
                 subtasksHtml = `
-                    <div class="mt-1.5 ml-7 space-y-1 border-l border-[#E3E1DA] pl-3 py-0.5">
+                    <div class="subtask-container mt-1.5 ml-7 space-y-1 border-l border-[#E3E1DA] pl-3 py-0.5">
                         ${task.subtasks.map(st => `
                             <div class="flex items-center space-x-2.5 group/sub min-w-0">
                                 <input type="checkbox" ${st.isChecked ? 'checked' : ''}
@@ -1053,6 +1053,12 @@
                                     '<i class="fas fa-star text-[#A67530] text-xs"></i>' :
                                     '<i class="far fa-star text-[#A67530] text-xs opacity-0 group-hover:opacity-50 transition-opacity"></i>'}
                             </button>
+                            ${isCompleted ? '' : `
+                            <button onclick="event.stopPropagation(); promptAddSubtask('${task.list_id}', '${task.id}', this)"
+                                    class="subtask-add-btn flex-shrink-0 focus:outline-none transition-all ml-0.5"
+                                    title="하위 작업 추가">
+                                <i class="fas fa-plus text-[#9B9790] text-[10px] opacity-0 group-hover:opacity-50 hover:!opacity-100 transition-opacity"></i>
+                            </button>`}
                         </div>
 
                         <div class="flex-shrink-0 ml-3 flex items-center gap-1.5">
@@ -1090,6 +1096,60 @@
             } catch (err) {
                 console.error(err);
                 showToast('날짜 변경에 실패했습니다');
+            }
+        }
+
+        function promptAddSubtask(listId, taskId, btnEl) {
+            const card = document.getElementById(`task-${taskId}`);
+            if (!card) return;
+            // 이미 입력 필드가 열려있으면 포커스만
+            const existing = card.querySelector('.subtask-input-row');
+            if (existing) { existing.querySelector('input').focus(); return; }
+
+            // 서브태스크 컨테이너 찾거나 생성
+            let container = card.querySelector('.subtask-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.className = 'subtask-container mt-1.5 ml-7 space-y-1 border-l border-[#E3E1DA] pl-3 py-0.5';
+                card.appendChild(container);
+            }
+
+            const row = document.createElement('div');
+            row.className = 'subtask-input-row flex items-center space-x-2 mt-1';
+            row.innerHTML = `
+                <i class="fas fa-plus text-[9px] text-[#C96442] flex-shrink-0"></i>
+                <input type="text" placeholder="하위 작업 입력" autofocus
+                       class="flex-1 text-[12px] bg-transparent border-b border-[#E3E1DA] focus:border-[#C96442] outline-none py-0.5 text-[#1A1917] placeholder:text-[#C8C5BC]"
+                       onkeydown="if(event.key==='Enter'){addSubtask('${listId}','${taskId}',this);event.preventDefault()}else if(event.key==='Escape'){this.closest('.subtask-input-row').remove()}"
+                       onblur="setTimeout(()=>{const r=this.closest('.subtask-input-row');if(r&&!this.value.trim())r.remove()},150)">
+            `;
+            container.appendChild(row);
+            row.querySelector('input').focus();
+        }
+
+        async function addSubtask(listId, taskId, inputEl) {
+            const title = inputEl.value.trim();
+            if (!title) return;
+            inputEl.disabled = true;
+            try {
+                const resp = await fetch(`/api/subtask/add/${listId}/${taskId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title })
+                });
+                if (resp.ok) {
+                    inputEl.value = '';
+                    inputEl.disabled = false;
+                    inputEl.focus();
+                    await fetchTasks(true);
+                    // 다시 입력 상태 유지
+                    setTimeout(() => promptAddSubtask(listId, taskId), 100);
+                } else {
+                    throw new Error('Fail');
+                }
+            } catch (err) {
+                inputEl.disabled = false;
+                showToast('하위 작업 추가에 실패했습니다');
             }
         }
 
