@@ -200,10 +200,20 @@
         @keyframes toastOut {
             to { opacity: 0; }
         }
+        #date-picker-popup {
+            position: absolute;
+            z-index: 200;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 5px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            padding: 10px;
+            width: 168px;
+        }
         </style>
         </head>
-        <body class="p-4 md:p-6">
-        <div id="date-picker-popup" class="hidden">
+<body class="p-4 md:p-6">
+    <div id="date-picker-popup" class="hidden">
         <div class="relative mb-2">
             <input type="text" id="date-input-field"
                    class="w-full p-2 pr-8 border border-[#E3E1DA] rounded text-[12px] outline-none focus:border-[#C96442] font-medium text-[#1A1917]"
@@ -219,8 +229,7 @@
             <button onclick="clearDueDate()" class="border border-[#E3E1DA] text-[#C04038] text-[11px] font-medium py-1.5 rounded hover:bg-[#FAEAEA] transition-colors">기한 삭제</button>
             <button onclick="closeDatePicker()" class="text-[#9B9790] text-[11px] font-medium py-1 rounded hover:bg-[#F0EFE9] transition-colors">취소</button>
         </div>
-        </div>
-<body class="p-4 md:p-6">
+    </div>
     <div id="weather-layer">
         <div class="sun-glare"></div>
         <div class="cloud-overlay"></div>
@@ -383,6 +392,8 @@
         let cachedTasks = [];
         let allLists = [];
         let userGroups = [];
+        const _completingTasks = new Set(); // Guard against duplicate task completions
+        let _fetchController = null; // AbortController for fetchTasks
         async function fetchLists() {
             try {
                 const [listsResp, groupsResp] = await Promise.all([
@@ -424,9 +435,17 @@
             }
         }
 
+        let _sortableInstances = [];
+
         function renderSidebar() {
             const container = document.getElementById('sidebar-list');
             container.innerHTML = '';
+            
+            // Clean up existing Sortable instances
+            if (_sortableInstances) {
+                _sortableInstances.forEach(s => { try { s.destroy(); } catch(e) {} });
+                _sortableInstances = [];
+            }
 
             // Grouped Lists
             userGroups.forEach((group, groupIdx) => {
@@ -478,7 +497,7 @@
             });
 
             // Initialize Group Reordering Sortable
-            new Sortable(container, {
+            const groupSortableInstance = new Sortable(container, {
                 animation: 150,
                 handle: '.group-header',
                 ghostClass: 'bg-slate-50',
@@ -503,6 +522,7 @@
                     renderSidebar();
                 }
             });
+            _sortableInstances.push(groupSortableInstance);
         }
 
         async function editGroup(idx, btn) {
@@ -564,7 +584,7 @@
         }
 
         function initSortable(el, groupIdx) {
-            new Sortable(el, {
+            const sortableInstance = new Sortable(el, {
                 group: 'lists',
                 animation: 150,
                 ghostClass: 'bg-blue-50',
@@ -589,6 +609,7 @@
                     renderSidebar();
                 }
             });
+            _sortableInstances.push(sortableInstance);
         }
 
         function toggleAddGroupPopup() {
@@ -788,6 +809,9 @@
         }
         
         async function fetchTasks(silent = false) {
+            if (_fetchController) _fetchController.abort();
+            _fetchController = new AbortController();
+
             const loading = document.getElementById('loading');
             const taskList = document.getElementById('task-list');
             const emptyState = document.getElementById('empty-state');
@@ -804,7 +828,7 @@
             try {
                 const query = getQueryForCurrentSelection();
                 const url = `/api/tasks${query}`;
-                const response = await fetch(url);
+                const response = await fetch(url, { signal: _fetchController.signal });
                 cachedTasks = await response.json();
                 
                 if (loadingTimeout) clearTimeout(loadingTimeout);
@@ -818,7 +842,8 @@
                     taskList.classList.remove('hidden');
                     emptyState.classList.add('hidden');
                 }
-            } catch (err) { 
+            } catch (err) {
+                if (err.name === 'AbortError') return;
                 if (loadingTimeout) clearTimeout(loadingTimeout);
                 console.error(err);
                 showToast('작업 목록을 불러올 수 없습니다');
@@ -1105,16 +1130,19 @@
         }
 
         async function completeTask(listId, taskId) {
-            const card = document.getElementById(`task-${taskId}`);
-            const isCurrentlyCompleted = card.classList.contains('opacity-60');
+            if (_completingTasks.has(taskId)) return;
+            _completingTasks.add(taskId);
             
-            if (!isCurrentlyCompleted) {
-                card.classList.add('completed', 'fade-out');
-            } else {
-                card.classList.remove('opacity-60');
-            }
-
             try {
+                const card = document.getElementById(`task-${taskId}`);
+                const isCurrentlyCompleted = card.classList.contains('opacity-60');
+                
+                if (!isCurrentlyCompleted) {
+                    card.classList.add('completed', 'fade-out');
+                } else {
+                    card.classList.remove('opacity-60');
+                }
+
                 const resp = await fetch(`/api/complete/${listId}/${taskId}`, { 
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -1130,12 +1158,16 @@
             } catch (err) {
                 console.error(err);
                 showToast('작업 완료 처리에 실패했습니다');
+                const card = document.getElementById(`task-${taskId}`);
+                const isCurrentlyCompleted = card.classList.contains('opacity-60') || card.classList.contains('fade-out');
                 // Revert UI
-                if (!isCurrentlyCompleted) {
+                if (isCurrentlyCompleted && !card.classList.contains('opacity-60')) {
                     card.classList.remove('completed', 'fade-out');
-                } else {
+                } else if (!isCurrentlyCompleted) {
                     card.classList.add('opacity-60');
                 }
+            } finally {
+                _completingTasks.delete(taskId);
             }
         }
 
@@ -1199,11 +1231,11 @@
             updateClock();
         }
 
-        function initBackgroundBySun() {
-            // Background animation setting is no longer used (flat design)
-        }
+
 
         async function initWeatherEffect() {
+            if (document.hidden) return;
+            
             const weatherEffect = localStorage.getItem('weatherEffect') !== 'false';
             const layer = document.getElementById('weather-layer');
             const sunGlare = layer.querySelector('.sun-glare');
@@ -1301,38 +1333,18 @@
             }
         }
 
-        function initEyeTracking() {
-            document.addEventListener('mousemove', (e) => {
-                const mouseX = e.clientX;
-                const mouseY = e.clientY;
 
-                const eyes = document.querySelectorAll('.eye');
-                eyes.forEach(eye => {
-                    const rect = eye.getBoundingClientRect();
-                    const eyeX = rect.left + rect.width / 2;
-                    const eyeY = rect.top + rect.height / 2;
 
-                    const angle = Math.atan2(mouseY - eyeY, mouseX - eyeX);
-                    const distance = Math.min(rect.width / 4, rect.height / 4); // max distance pupil can move
-
-                    const pupilX = Math.cos(angle) * distance;
-                    const pupilY = Math.sin(angle) * distance;
-
-                    const pupil = eye.querySelector('.pupil');
-                    if (pupil) {
-                        pupil.style.transform = `translate(calc(-50% + ${pupilX}px), calc(-50% + ${pupilY}px))`;
-                    }
-                });
-            });
-        }
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && typeof initWeatherEffect === 'function') {
+                initWeatherEffect();
+            }
+        });
 
         document.addEventListener('DOMContentLoaded', () => {
             fetchLists();
             initClock();
-            initBackgroundBySun();
             initWeatherEffect();
-            initEyeTracking();
-            setInterval(initBackgroundBySun, 10 * 60 * 1000);
             setInterval(initWeatherEffect, 30 * 60 * 1000); // Update weather every 30 mins
         });    </script>
 <script>

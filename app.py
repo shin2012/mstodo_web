@@ -5,6 +5,8 @@ import secrets
 import requests
 import ast
 import time
+import re
+import threading
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 from flask import Flask, render_template, jsonify, request, redirect, url_for, session
@@ -99,52 +101,55 @@ def get_refreshed_token():
     expires_at = token.get('expires_at', 0)
     if expires_at < time.time() + 300:
         # Use file locking to prevent multiple processes from refreshing at the same time
-        lock_file = open(CONFIG_FILE + '.lock', 'w')
         try:
-            fcntl.flock(lock_file, fcntl.LOCK_EX)
-            # Re-load token inside lock to check if another process already refreshed it
-            token = load_token()
-            expires_at = token.get('expires_at', 0)
-            if expires_at >= time.time() + 300:
-                return token
+            with open(CONFIG_FILE + '.lock', 'w') as lock_file:
+                fcntl.flock(lock_file, fcntl.LOCK_EX)
+                try:
+                    # Re-load token inside lock to check if another process already refreshed it
+                    token = load_token()
+                    expires_at = token.get('expires_at', 0)
+                    if expires_at >= time.time() + 300:
+                        return token
 
-            client_id = config.get('connect', 'client_id')
-            client_secret = config.get('connect', 'client_secret')
-            refresh_token_val = token.get('refresh_token')
-            
-            if not refresh_token_val:
-                return token
-                
-            print(f"Attempting to refresh token for {client_id}")
-            url = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
-            data = {
-                'client_id': client_id,
-                'client_secret': client_secret,
-                'grant_type': 'refresh_token',
-                'refresh_token': refresh_token_val,
-                'scope': 'openid offline_access Tasks.ReadWrite'
-            }
-            resp = requests.post(url, data=data)
-            if resp.status_code == 200:
-                new_token = resp.json()
-                if 'refresh_token' not in new_token:
-                    new_token['refresh_token'] = refresh_token_val
-                if 'expires_at' not in new_token:
-                    new_token['expires_at'] = int(time.time()) + new_token.get('expires_in', 3600)
-                
-                config.set('connect', 'client_token', str(new_token))
-                save_config(config)
-                print("Token refreshed and saved successfully.")
-                return new_token
-            else:
-                print(f"Token refresh failed: {resp.text}")
-                return token if expires_at > time.time() else None
+                    client_id = config.get('connect', 'client_id')
+                    client_secret = config.get('connect', 'client_secret')
+                    refresh_token_val = token.get('refresh_token')
+                    
+                    if not refresh_token_val:
+                        return token
+                        
+                    print(f"Attempting to refresh token for {client_id}")
+                    url = "https://login.microsoftonline.com/common/oauth2/v2.0/token"
+                    data = {
+                        'client_id': client_id,
+                        'client_secret': client_secret,
+                        'grant_type': 'refresh_token',
+                        'refresh_token': refresh_token_val,
+                        'scope': 'openid offline_access Tasks.ReadWrite'
+                    }
+                    resp = requests.post(url, data=data)
+                    if resp.status_code == 200:
+                        new_token = resp.json()
+                        if 'refresh_token' not in new_token:
+                            new_token['refresh_token'] = refresh_token_val
+                        if 'expires_at' not in new_token:
+                            new_token['expires_at'] = int(time.time()) + new_token.get('expires_in', 3600)
+                        
+                        config.set('connect', 'client_token', str(new_token))
+                        save_config(config)
+                        print("Token refreshed and saved successfully.")
+                        return new_token
+                    else:
+                        print(f"Token refresh failed: {resp.text}")
+                        return token if expires_at > time.time() else None
+                except Exception as e:
+                    print(f"Error during token refresh: {e}")
+                    return token if expires_at > time.time() else None
+                finally:
+                    fcntl.flock(lock_file, fcntl.LOCK_UN)
         except Exception as e:
-            print(f"Error during token refresh: {e}")
+            print(f"Error opening lock file: {e}")
             return token if expires_at > time.time() else None
-        finally:
-            fcntl.flock(lock_file, fcntl.LOCK_UN)
-            lock_file.close()
             
     return token
 
@@ -427,8 +432,8 @@ def sync_all():
             if is_fresh_sync:
                 database.mark_missing_tasks_deleted(l_id, returned_task_ids)
 
-        # Sync tasks sequentially or with ThreadPool
-        with ThreadPoolExecutor(max_workers=5) as executor:
+        # Sync tasks sequentially with max_workers=1 to avoid SQLite concurrent write conflicts
+        with ThreadPoolExecutor(max_workers=1) as executor:
             executor.map(sync_list_tasks, lists_to_sync)
             
         return jsonify({"has_changes": has_changes})
@@ -475,11 +480,16 @@ def add_task():
     if not token_data: return jsonify({"error": "Not authenticated"}), 401
     
     data = request.json
-    title = data.get('title')
-    list_id = data.get('list_id')
+    title = data.get('title', '').strip() if data.get('title') else ''
+    list_id = data.get('list_id', '').strip() if data.get('list_id') else ''
     
-    if not title or not list_id:
-        return jsonify({"error": "Missing title or list_id"}), 400
+    # Validate inputs
+    if not title:
+        return jsonify({"error": "title is required"}), 400
+    if len(title) > 255:
+        return jsonify({"error": "title must be at most 255 characters"}), 400
+    if not list_id:
+        return jsonify({"error": "list_id is required"}), 400
         
     try:
         access_token = token_data.get('access_token')
@@ -536,8 +546,24 @@ def update_task(list_id, task_id):
     
     data = request.json
     payload = {}
-    if 'title' in data: payload['title'] = data['title']
-    if 'importance' in data: payload['importance'] = data['importance']
+    
+    # Validate and add title if present
+    if 'title' in data:
+        title = data['title']
+        if isinstance(title, str):
+            title = title.strip()
+        if not title:
+            return jsonify({"error": "title cannot be empty"}), 400
+        if len(title) > 255:
+            return jsonify({"error": "title must be at most 255 characters"}), 400
+        payload['title'] = title
+    
+    # Validate and add importance if present
+    if 'importance' in data:
+        importance = data['importance']
+        if importance not in ['high', 'normal']:
+            return jsonify({"error": "importance must be 'high' or 'normal'"}), 400
+        payload['importance'] = importance
     
     try:
         access_token = token_data.get('access_token')
@@ -597,7 +623,13 @@ def update_subtask(list_id, task_id, subtask_id):
     if not token_data: return jsonify({"error": "Not authenticated"}), 401
     
     data = request.json
-    title = data.get('title')
+    title = data.get('title', '').strip() if isinstance(data.get('title'), str) else ''
+    
+    # Validate title
+    if not title:
+        return jsonify({"error": "title is required"}), 400
+    if len(title) > 255:
+        return jsonify({"error": "title must be at most 255 characters"}), 400
     
     try:
         access_token = token_data.get('access_token')
@@ -629,7 +661,18 @@ def update_task_due(list_id, task_id):
     if not token_data: return jsonify({"error": "Not authenticated"}), 401
     
     data = request.json
-    due_date = data.get('due_date') # Expecting YYYY-MM-DD or None
+    due_date = data.get('due_date')  # Expecting YYYY-MM-DD or None
+    
+    # Validate due_date format if provided (not None)
+    if due_date is not None:
+        # Must be a string matching YYYY-MM-DD format
+        if not isinstance(due_date, str) or not re.match(r'^\d{4}-\d{2}-\d{2}$', due_date):
+            return jsonify({"error": "due_date must be in YYYY-MM-DD format or null"}), 400
+        # Additional check: try to parse to validate the date exists
+        try:
+            datetime.strptime(due_date, '%Y-%m-%d')
+        except ValueError:
+            return jsonify({"error": "due_date is not a valid date"}), 400
     
     payload = {"dueDateTime": None}
     if due_date:
