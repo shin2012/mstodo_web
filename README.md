@@ -238,14 +238,23 @@ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 | `add_subtask` / `set_subtask_done` | 하위 작업 추가·체크 |
 | `sync_todo` | 즉시 동기화 |
 
-- 주소: `https://todo-mcp.b-612.kr` (NPM → `mstodo_mcp:8095`, tinyauth 없음)
-- 인증: `.env`의 `MCP_TOKEN`
-  - claude.ai 사용자 지정 커넥터: `https://todo-mcp.b-612.kr/<MCP_TOKEN>/mcp`
-  - Claude Code: `claude mcp add --transport http mstodo https://todo-mcp.b-612.kr/mcp --header "Authorization: Bearer <MCP_TOKEN>"`
+- 주소: `https://todo.b-612.kr/mcp` (웹 앱과 같은 도메인, NPM이 `/mcp`·`/.well-known/oauth-*`만 `mstodo_mcp:8095`로 보냄)
+- 인증
+  - **claude.ai 커넥터**: OAuth 2.1 (동적 클라이언트 등록 + PKCE). 연결하면 승인 페이지(`/mcp/consent/…`)가 뜨고, 이 페이지만 tinyauth 로그인(Tailscale이면 바로 통과)으로 보호됨 → **허용** 누르면 끝
+  - **Claude Code**: `claude mcp add --transport http mstodo https://todo.b-612.kr/mcp --header "Authorization: Bearer <MCP_TOKEN>"` (`.env`의 정적 토큰)
+- 토큰 저장: `mcp_data/oauth_store.json` (액세스 1일, 리프레시 180일·회전). 모든 연결을 끊으려면 이 파일을 지우고 컨테이너 재시작
 - 점검: `python scripts/mcp_smoke_test.py <URL> [토큰]`
 
-> [!WARNING]
-> URL 자체가 비밀번호입니다. 토큰이 노출되면 `.env`의 `MCP_TOKEN`을 바꾸고 `docker compose up -d --no-deps mstodo_mcp`로 재시작하세요.
+```mermaid
+sequenceDiagram
+    Claude->>MCP: POST /mcp (토큰 없음) → 401
+    Claude->>MCP: /.well-known 조회, /mcp/register
+    Claude->>사용자 브라우저: /mcp/authorize → /mcp/consent
+    사용자 브라우저->>tinyauth: 로그인
+    사용자 브라우저->>MCP: 허용 → 인가 코드
+    Claude->>MCP: /mcp/token (PKCE) → 액세스 토큰
+    Claude->>MCP: POST /mcp (Bearer)
+```
 
 ---
 
@@ -255,6 +264,7 @@ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 mstodo_web/
 ├── app.py                 # Flask 메인 애플리케이션
 ├── mcp_server.py          # Claude 연동 MCP 서버 (mstodo_mcp 컨테이너)
+├── oauth_provider.py      # MCP용 OAuth 인가 서버 + 승인 페이지
 ├── Dockerfile.mcp         # MCP 서버 이미지
 ├── sync_worker.py         # 백그라운드 동기화 워커
 ├── database.py            # 데이터베이스 관리

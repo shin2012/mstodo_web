@@ -3,21 +3,36 @@
 mstodo_web의 REST API(/api/*)를 그대로 호출한다. DB에 직접 쓰지 않으므로
 Microsoft To Do 동기화 로직은 웹 앱과 동일하게 유지된다.
 
-인증: MCP_TOKEN 하나로
-  - URL 경로:  https://<host>/<MCP_TOKEN>/mcp   (claude.ai 사용자 지정 커넥터용)
-  - 헤더:      Authorization: Bearer <MCP_TOKEN>  (Claude Code / Desktop용, 경로는 /mcp)
+인증 (oauth_provider.py):
+  - claude.ai 커넥터: OAuth 2.1 (동적 등록 + PKCE). 승인 페이지 /consent는 NPM에서 tinyauth 로그인으로 보호.
+  - Claude Code 등: Authorization: Bearer <MCP_TOKEN> (정적 토큰)
 """
-import hmac
 import os
 import re
 from datetime import date, datetime, timedelta, timezone
 
 import httpx
+from mcp.server.auth.settings import AuthSettings, ClientRegistrationOptions, RevocationOptions
 from mcp.server.fastmcp import FastMCP
+from starlette.requests import Request
+from starlette.responses import PlainTextResponse
+
+from oauth_provider import TodoOAuthProvider
 
 API_BASE = os.environ.get("TODO_API_BASE", "http://mstodo_web:5001").rstrip("/")
 MCP_TOKEN = os.environ.get("MCP_TOKEN", "")
+PUBLIC_URL = os.environ.get("PUBLIC_URL", "https://todo.b-612.kr").rstrip("/")
+MCP_BASE = f"{PUBLIC_URL}/mcp"   # MCP 엔드포인트 = OAuth issuer
 KST = timezone(timedelta(hours=9))
+
+provider = TodoOAuthProvider(MCP_BASE, static_token=MCP_TOKEN)
+_auth = AuthSettings(
+    issuer_url=MCP_BASE,
+    resource_server_url=MCP_BASE,
+    validate_token_resource=False,
+    client_registration_options=ClientRegistrationOptions(enabled=True),
+    revocation_options=RevocationOptions(enabled=True),
+)
 
 try:
     from mcp.server.transport_security import TransportSecuritySettings
@@ -34,8 +49,20 @@ mcp = FastMCP(
     stateless_http=True,
     json_response=True,
     host="0.0.0.0",
+    auth=_auth,
+    auth_server_provider=provider,
     **_security,
 )
+
+
+@mcp.custom_route("/health", methods=["GET"])
+async def health(_: Request):
+    return PlainTextResponse("ok")
+
+
+@mcp.custom_route("/consent/{rid}", methods=["GET", "POST"])
+async def consent(request: Request):
+    return await provider.consent(request)
 
 _client = httpx.Client(base_url=API_BASE, timeout=60)
 
@@ -271,41 +298,30 @@ def sync_todo() -> dict:
     return _api("GET", "/api/sync/all")
 
 
-# ───────────────────────────── ASGI 앱 + 토큰 인증 ─────────────────────────────
-
+# ───────────────────────────── ASGI 앱 ─────────────────────────────
+# 웹 앱과 같은 도메인(todo.b-612.kr)의 /mcp 아래에서 동작한다. NPM이 /mcp, /.well-known/oauth-* 만 이 컨테이너로 보낸다.
+#   /mcp                                         → MCP (Bearer 필수)
+#   /mcp/authorize|token|register|revoke|health  → SDK 루트 경로로 변환
+#   /mcp/consent/<rid>                           → 승인 페이지 (NPM에서 tinyauth 보호)
+#   /.well-known/oauth-authorization-server/mcp  → RFC 8414 경로 삽입 방식
+#   /.well-known/oauth-protected-resource/mcp    → SDK가 그대로 제공
 _inner = mcp.streamable_http_app()
+_AS_META = "/.well-known/oauth-authorization-server"
+
+
+def _rewrite(path: str) -> str:
+    if path.startswith("/mcp/"):
+        return path[4:]
+    if path == _AS_META + "/mcp":
+        return _AS_META
+    return path
 
 
 async def app(scope, receive, send):
-    if scope["type"] == "lifespan":
-        return await _inner(scope, receive, send)
-    if scope["type"] != "http":
-        return await _inner(scope, receive, send)
-
-    path = scope.get("path", "")
-    if path == "/health":
-        await send({"type": "http.response.start", "status": 200,
-                    "headers": [(b"content-type", b"text/plain")]})
-        return await send({"type": "http.response.body", "body": b"ok"})
-
-    authed = False
-    if MCP_TOKEN:
-        prefix = f"/{MCP_TOKEN}"
-        if path == prefix or path.startswith(prefix + "/"):
-            new_path = path[len(prefix):] or "/"
-            scope = dict(scope, path=new_path, raw_path=new_path.encode())
-            authed = True
-        else:
-            for k, v in scope.get("headers", []):
-                if k == b"authorization":
-                    val = v.decode(errors="ignore")
-                    if val.lower().startswith("bearer ") and hmac.compare_digest(val[7:].strip(), MCP_TOKEN):
-                        authed = True
-                    break
-    if not authed:
-        await send({"type": "http.response.start", "status": 401,
-                    "headers": [(b"content-type", b"application/json")]})
-        return await send({"type": "http.response.body", "body": b'{"error":"unauthorized"}'})
+    if scope["type"] == "http":
+        new = _rewrite(scope["path"])
+        if new != scope["path"]:
+            scope = dict(scope, path=new, raw_path=new.encode())
     return await _inner(scope, receive, send)
 
 

@@ -12,3 +12,4 @@ mstodo.db
 list_groups.json
 config.ini.lock
 check_db.py
+mcp_data/

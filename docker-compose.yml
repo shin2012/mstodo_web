@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   mstodo_web:
     build: .
@@ -29,10 +27,13 @@ services:
       - TZ=Asia/Seoul
       - TODO_API_BASE=http://mstodo_web:5001
       - MCP_PORT=8095
+      - PUBLIC_URL=https://todo.b-612.kr
     ports:
       - "127.0.0.1:8095:8095"
     volumes:
       - ./mcp_server.py:/app/mcp_server.py:ro
+      - ./oauth_provider.py:/app/oauth_provider.py:ro
+      - ./mcp_data:/data
     depends_on:
       - mstodo_web
     networks:
