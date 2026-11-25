@@ -223,11 +223,39 @@ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 
 ---
 
+## 🤖 Claude 연동 (MCP 서버)
+
+`mstodo_mcp` 컨테이너가 MCP(Streamable HTTP) 서버를 띄워 Claude에서 할 일을 조회·추가·완료할 수 있습니다. 웹 앱의 `/api/*`를 그대로 호출하므로 Microsoft To Do 동기화 방식은 웹 화면과 같습니다.
+
+| 도구 | 설명 |
+|------|------|
+| `list_lists` | 목록 전체 |
+| `list_tasks` | 목록별/중요/기한(overdue·today·week·none) 필터 조회 |
+| `search_tasks` | 제목·하위 작업 검색 |
+| `add_task` | 추가 (기한, 중요, 하위 작업 함께 가능) |
+| `complete_task` | 완료 / 되돌리기 |
+| `update_task` | 제목·중요·기한 변경 |
+| `add_subtask` / `set_subtask_done` | 하위 작업 추가·체크 |
+| `sync_todo` | 즉시 동기화 |
+
+- 주소: `https://todo-mcp.b-612.kr` (NPM → `mstodo_mcp:8095`, tinyauth 없음)
+- 인증: `.env`의 `MCP_TOKEN`
+  - claude.ai 사용자 지정 커넥터: `https://todo-mcp.b-612.kr/<MCP_TOKEN>/mcp`
+  - Claude Code: `claude mcp add --transport http mstodo https://todo-mcp.b-612.kr/mcp --header "Authorization: Bearer <MCP_TOKEN>"`
+- 점검: `python scripts/mcp_smoke_test.py <URL> [토큰]`
+
+> [!WARNING]
+> URL 자체가 비밀번호입니다. 토큰이 노출되면 `.env`의 `MCP_TOKEN`을 바꾸고 `docker compose up -d --no-deps mstodo_mcp`로 재시작하세요.
+
+---
+
 ## 📂 프로젝트 구조
 
 ```
 mstodo_web/
 ├── app.py                 # Flask 메인 애플리케이션
+├── mcp_server.py          # Claude 연동 MCP 서버 (mstodo_mcp 컨테이너)
+├── Dockerfile.mcp         # MCP 서버 이미지
 ├── sync_worker.py         # 백그라운드 동기화 워커
 ├── database.py            # 데이터베이스 관리
 ├── requirements.txt       # Python 의존성

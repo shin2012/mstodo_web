@@ -16,3 +16,29 @@ services:
     command: >
       sh -c "gunicorn --bind 0.0.0.0:5001 --timeout 600 app:app & 
              python3 sync_worker.py"
+
+  # Claude 연동용 MCP 서버 (mstodo_web REST API를 호출)
+  mstodo_mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile.mcp
+    container_name: mstodo_mcp
+    restart: always
+    env_file: .env
+    environment:
+      - TZ=Asia/Seoul
+      - TODO_API_BASE=http://mstodo_web:5001
+      - MCP_PORT=8095
+    ports:
+      - "127.0.0.1:8095:8095"
+    volumes:
+      - ./mcp_server.py:/app/mcp_server.py:ro
+    depends_on:
+      - mstodo_web
+    networks:
+      - default
+      - npm_network
+
+networks:
+  npm_network:
+    external: true
