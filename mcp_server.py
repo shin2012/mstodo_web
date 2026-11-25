@@ -15,6 +15,7 @@ import httpx
 from mcp.server.auth.settings import AuthSettings, ClientRegistrationOptions, RevocationOptions
 from mcp.server.fastmcp import FastMCP
 from mcp.types import ToolAnnotations
+from pydantic import BaseModel, Field
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
 
@@ -293,25 +294,75 @@ def set_subtask_done(task_id: str, subtask_id: str, done: bool = True) -> dict:
     return {"ok": True, "done": done}
 
 
+class DeleteItem(BaseModel):
+    title: str = Field(description="삭제할 할 일 제목(사용자 확인용, 실제 제목과 같아야 함)")
+    task_id: str
+
+
+class DeleteSubItem(BaseModel):
+    title: str = Field(description="삭제할 하위 작업 이름(사용자 확인용, 실제 이름과 같아야 함)")
+    subtask_id: str
+
+
+def _same(a: str, b: str) -> bool:
+    return " ".join((a or "").split()) == " ".join((b or "").split())
+
+
+def _task_index() -> dict[str, dict]:
+    idx = {t["id"]: t for t in _all_tasks(include_completed=True)}
+    return idx
+
+
 @mcp.tool(annotations=ToolAnnotations(title="할 일 삭제", destructiveHint=True))
-def delete_task(task_id: str) -> dict:
-    """할 일을 영구 삭제한다(되돌릴 수 없음). 하위 작업도 함께 지워진다.
-    단순히 끝낸 일이면 complete_task를 쓸 것. 삭제 전에 사용자에게 제목을 보여 주고 확인받을 것."""
-    t = _find_task(task_id)
-    _api("DELETE", f"/api/tasks/{t['list_id']}/{task_id}")
-    return {"ok": True, "deleted": t["title"], "list": t.get("list_name")}
+def delete_tasks(items: list[DeleteItem]) -> dict:
+    """할 일을 영구 삭제한다(되돌릴 수 없음, 하위 작업도 함께 삭제). 여러 개면 반드시 한 번의 호출에 모두 담을 것
+    (사용자가 한 번에 확인하도록). 각 항목에 실제 제목(title)을 함께 넣어야 하며, 제목이 맞지 않으면 아무것도 지우지 않는다.
+    단순히 끝낸 일이면 삭제 대신 complete_task를 쓸 것."""
+    if not items:
+        raise ValueError("삭제할 항목이 없음")
+    idx = _task_index()
+    problems = []
+    for it in items:
+        t = idx.get(it.task_id)
+        if not t:
+            problems.append(f"'{it.title}': 해당 task_id 없음")
+        elif not _same(t["title"], it.title):
+            problems.append(f"'{it.title}': 실제 제목은 '{t['title']}'")
+    if problems:
+        raise ValueError("확인 실패로 아무것도 삭제하지 않음 — " + "; ".join(problems))
+    deleted, failed = [], []
+    for it in items:
+        t = idx[it.task_id]
+        try:
+            _api("DELETE", f"/api/tasks/{t['list_id']}/{it.task_id}")
+            deleted.append({"title": t["title"], "list": t.get("list_name")})
+        except Exception as e:
+            failed.append({"title": t["title"], "error": str(e)})
+    return {"deleted_count": len(deleted), "deleted": deleted, "failed": failed}
 
 
 @mcp.tool(annotations=ToolAnnotations(title="하위 작업 삭제", destructiveHint=True))
-def delete_subtask(task_id: str, subtask_id: str) -> dict:
-    """할 일의 하위 작업 하나를 영구 삭제한다(되돌릴 수 없음)."""
+def delete_subtasks(task_title: str, task_id: str, subtasks: list[DeleteSubItem]) -> dict:
+    """한 할 일 아래의 하위 작업들을 영구 삭제한다(되돌릴 수 없음). 여러 개면 한 번의 호출에 모두 담을 것.
+    task_title과 각 하위 작업 title은 실제 이름과 같아야 하며, 다르면 아무것도 지우지 않는다."""
+    if not subtasks:
+        raise ValueError("삭제할 하위 작업이 없음")
     t = _find_task(task_id)
-    subs = t.get("subtasks") or t.get("checklistItems") or []
-    name = next((s.get("displayName") for s in subs if s.get("id") == subtask_id), None)
-    if name is None:
-        raise ValueError("해당 subtask_id가 이 할 일에 없음")
-    _api("DELETE", f"/api/subtask/delete/{t['list_id']}/{task_id}/{subtask_id}")
-    return {"ok": True, "deleted": name, "task": t["title"]}
+    if not _same(t["title"], task_title):
+        raise ValueError(f"할 일 제목 불일치: 실제 제목은 '{t['title']}' — 아무것도 삭제하지 않음")
+    subs = {x.get("id"): x.get("displayName") for x in (t.get("subtasks") or t.get("checklistItems") or [])}
+    problems = [f"'{x.title}': " + ("해당 subtask_id 없음" if x.subtask_id not in subs else f"실제 이름은 '{subs[x.subtask_id]}'")
+                for x in subtasks if x.subtask_id not in subs or not _same(subs[x.subtask_id], x.title)]
+    if problems:
+        raise ValueError("확인 실패로 아무것도 삭제하지 않음 — " + "; ".join(problems))
+    deleted, failed = [], []
+    for x in subtasks:
+        try:
+            _api("DELETE", f"/api/subtask/delete/{t['list_id']}/{task_id}/{x.subtask_id}")
+            deleted.append(subs[x.subtask_id])
+        except Exception as e:
+            failed.append({"title": subs[x.subtask_id], "error": str(e)})
+    return {"task": t["title"], "deleted": deleted, "failed": failed}
 
 
 @mcp.tool()

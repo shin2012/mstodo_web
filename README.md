@@ -236,7 +236,7 @@ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 | `complete_task` | 완료 / 되돌리기 |
 | `update_task` | 제목·중요·기한 변경 |
 | `add_subtask` / `set_subtask_done` | 하위 작업 추가·체크 |
-| `delete_task` / `delete_subtask` | 할 일·하위 작업 영구 삭제 (되돌릴 수 없음) |
+| `delete_tasks` / `delete_subtasks` | 할 일·하위 작업 일괄 영구 삭제 (한 번 확인으로 여러 개, 제목이 실제와 다르면 전부 취소) |
 | `sync_todo` | 즉시 동기화 |
 
 - 주소: `https://todo.b-612.kr/mcp` (웹 앱과 같은 도메인, NPM이 `/mcp`·`/.well-known/oauth-*`만 `mstodo_mcp:8095`로 보냄)
