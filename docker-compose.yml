@@ -7,6 +7,7 @@ services:
       - "5001:5001"
     volumes:
       - .:/app
+      - /vault/mstodo_web:/vault/mstodo_web   # config.ini(OAuth 토큰·시크릿) 볼트
     environment:
       - TZ=Asia/Seoul
       - MS_CLIENT_ID=
@@ -22,7 +23,7 @@ services:
       dockerfile: Dockerfile.mcp
     container_name: mstodo_mcp
     restart: always
-    env_file: .env
+    env_file: /vault/mstodo_web/secrets.env
     environment:
       - TZ=Asia/Seoul
       - TODO_API_BASE=http://mstodo_web:5001

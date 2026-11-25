@@ -21,7 +21,7 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 app.secret_key = os.environ.get('SECRET_KEY', 'default_secret_key_for_persistence_12345')
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-CONFIG_FILE = os.path.join(BASE_DIR, 'config.ini')
+CONFIG_FILE = os.environ.get('MSTODO_CONFIG', '/vault/mstodo_web/config.ini')  # 볼트(컨테이너에도 같은 경로로 마운트)
 
 def get_config():
     config = configparser.ConfigParser()
