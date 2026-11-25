@@ -581,6 +581,39 @@ def update_task(list_id, task_id):
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+@app.route('/api/tasks/<list_id>/<task_id>', methods=['DELETE'])
+def delete_task(list_id, task_id):
+    token_data = get_refreshed_token()
+    if not token_data: return jsonify({"error": "Not authenticated"}), 401
+    try:
+        headers = {"Authorization": f"Bearer {token_data.get('access_token')}"}
+        url = f"https://graph.microsoft.com/v1.0/me/todo/lists/{list_id}/tasks/{task_id}"
+        resp = requests.delete(url, headers=headers)
+        if resp.status_code in [200, 204, 404]:  # 404 = 이미 삭제됨
+            database.delete_task_by_id(task_id)
+            return jsonify({"success": True})
+        return jsonify({"error": resp.text}), resp.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/subtask/delete/<list_id>/<task_id>/<subtask_id>', methods=['DELETE'])
+def delete_subtask(list_id, task_id, subtask_id):
+    token_data = get_refreshed_token()
+    if not token_data: return jsonify({"error": "Not authenticated"}), 401
+    try:
+        headers = {"Authorization": f"Bearer {token_data.get('access_token')}"}
+        url = f"https://graph.microsoft.com/v1.0/me/todo/lists/{list_id}/tasks/{task_id}/checklistItems/{subtask_id}"
+        resp = requests.delete(url, headers=headers)
+        if resp.status_code in [200, 204, 404]:
+            task = database.get_task_by_id(task_id)
+            if task:
+                subtasks = [s for s in task.get('checklistItems', []) if s.get('id') != subtask_id]
+                database.update_task_local(task_id, checklist_items=subtasks)
+            return jsonify({"success": True})
+        return jsonify({"error": resp.text}), resp.status_code
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 GROUPS_FILE = os.path.join(BASE_DIR, 'list_groups.json')
 
 def get_groups():

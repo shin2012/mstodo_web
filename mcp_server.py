@@ -14,6 +14,7 @@ from datetime import date, datetime, timedelta, timezone
 import httpx
 from mcp.server.auth.settings import AuthSettings, ClientRegistrationOptions, RevocationOptions
 from mcp.server.fastmcp import FastMCP
+from mcp.types import ToolAnnotations
 from starlette.requests import Request
 from starlette.responses import PlainTextResponse
 
@@ -290,6 +291,27 @@ def set_subtask_done(task_id: str, subtask_id: str, done: bool = True) -> dict:
     t = _find_task(task_id)
     _api("POST", f"/api/subtask/complete/{t['list_id']}/{task_id}/{subtask_id}", json={"checked": done})
     return {"ok": True, "done": done}
+
+
+@mcp.tool(annotations=ToolAnnotations(title="할 일 삭제", destructiveHint=True))
+def delete_task(task_id: str) -> dict:
+    """할 일을 영구 삭제한다(되돌릴 수 없음). 하위 작업도 함께 지워진다.
+    단순히 끝낸 일이면 complete_task를 쓸 것. 삭제 전에 사용자에게 제목을 보여 주고 확인받을 것."""
+    t = _find_task(task_id)
+    _api("DELETE", f"/api/tasks/{t['list_id']}/{task_id}")
+    return {"ok": True, "deleted": t["title"], "list": t.get("list_name")}
+
+
+@mcp.tool(annotations=ToolAnnotations(title="하위 작업 삭제", destructiveHint=True))
+def delete_subtask(task_id: str, subtask_id: str) -> dict:
+    """할 일의 하위 작업 하나를 영구 삭제한다(되돌릴 수 없음)."""
+    t = _find_task(task_id)
+    subs = t.get("subtasks") or t.get("checklistItems") or []
+    name = next((s.get("displayName") for s in subs if s.get("id") == subtask_id), None)
+    if name is None:
+        raise ValueError("해당 subtask_id가 이 할 일에 없음")
+    _api("DELETE", f"/api/subtask/delete/{t['list_id']}/{task_id}/{subtask_id}")
+    return {"ok": True, "deleted": name, "task": t["title"]}
 
 
 @mcp.tool()
