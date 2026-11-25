@@ -242,7 +242,7 @@ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 - 주소: `https://todo.b-612.kr/mcp` (웹 앱과 같은 도메인, NPM이 `/mcp`·`/.well-known/oauth-*`만 `mstodo_mcp:8095`로 보냄)
 - 인증
   - **claude.ai 커넥터**: OAuth 2.1 (동적 클라이언트 등록 + PKCE). 연결하면 승인 페이지(`/mcp/consent/…`)가 뜨고, 이 페이지만 tinyauth 로그인(Tailscale이면 바로 통과)으로 보호됨 → **허용** 누르면 끝
-  - **Claude Code**: `claude mcp add --transport http mstodo https://todo.b-612.kr/mcp --header "Authorization: Bearer <MCP_TOKEN>"` (`.env`의 정적 토큰)
+  - **Claude Code**: `claude mcp add --transport http mstodo https://todo.b-612.kr/mcp --header "Authorization: Bearer <MCP_TOKEN>"` (`/vault/mstodo_web/secrets.env`의 정적 토큰)
 - 토큰 저장: `mcp_data/oauth_store.json` (액세스 1일, 리프레시 180일·회전). 모든 연결을 끊으려면 이 파일을 지우고 컨테이너 재시작
 - 점검: `python scripts/mcp_smoke_test.py <URL> [토큰]`
 
@@ -272,7 +272,7 @@ mstodo_web/
 ├── requirements.txt       # Python 의존성
 ├── Dockerfile             # Docker 이미지 정의
 ├── docker-compose.yml     # Docker Compose 설정
-├── config.ini             # 설정 파일 (환경변수로도 가능)
+├── config.ini             # 실제 파일은 /vault/mstodo_web/config.ini (MSTODO_CONFIG로 변경 가능)
 ├── templates/             # HTML 템플릿
 │   └── index.html         # 메인 UI
 ├── static/                # CSS, JavaScript, 이미지
